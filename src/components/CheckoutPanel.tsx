@@ -1,0 +1,205 @@
+import { useState } from 'react';
+import { X, ShoppingBag, Shield, CreditCard, Check, Minus, Plus, AlertCircle } from 'lucide-react';
+import { STORES, ADDON_DEFS, fmt, getVarKey, type StoreId, type Currency } from '../config/stores';
+import { getProductPrice } from '../lib/storefront-api';
+import type { CartItem } from './ProductCard';
+
+interface CheckoutPanelProps {
+  cart: CartItem[];
+  setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
+  currency: Currency;
+  storeId: StoreId;
+  onClose: () => void;
+}
+
+type PromoState = 
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'ok'; message: string; discountAmount: number; promoId: string }
+  | { status: 'err'; message: string };
+
+export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: CheckoutPanelProps) {
+  const [promo, setPromo] = useState('');
+  const [promoState, setPromoState] = useState<PromoState>({ status: 'idle' });
+
+  const subtotal = cart.reduce((s, item) => {
+    const base = getProductPrice(item.product, currency) * item.qty;
+    const add = (item.addons || []).reduce(
+      (a, id) => a + (ADDON_DEFS[id]?.price[currency] || 0), 0
+    ) * item.qty;
+    return s + base + add;
+  }, 0);
+
+  const discount = promoState.status === 'ok' ? promoState.discountAmount : 0;
+
+  // Free shipping thresholds
+  const freeShippingThreshold = currency === 'DOP' ? 8000 : currency === 'EUR' ? 130 : 150;
+  const shippingBase = currency === 'DOP' ? 450 : currency === 'EUR' ? 7 : 8;
+  const shipping = (subtotal - discount) > freeShippingThreshold ? 0 : shippingBase;
+
+  const taxRate = STORES[storeId].tax_rate || 0;
+  const taxAmount = taxRate > 0 ? ((subtotal - discount + shipping) * taxRate) / 100 : 0;
+  const total = subtotal - discount + shipping + taxAmount;
+
+  const updQty = (idx: number, d: number) =>
+    setCart(c => c.map((it, i) => i === idx ? { ...it, qty: Math.max(1, it.qty + d) } : it));
+  const rm = (idx: number) =>
+    setCart(c => c.filter((_, i) => i !== idx));
+
+  const applyPromo = async () => {
+    if (!promo.trim()) return;
+    setPromoState({ status: 'loading' });
+    try {
+      const res = await fetch('/api/validate-promo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: promo.trim(), subtotal, currency }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setPromoState({ status: 'ok', message: data.message, discountAmount: data.discountAmount, promoId: data.promoId });
+      } else {
+        setPromoState({ status: 'err', message: data.message });
+      }
+    } catch {
+      setPromoState({ status: 'err', message: 'Error al validar el código' });
+    }
+  };
+
+  return (
+    <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="panel">
+        {/* Header */}
+        <div className="panel-hd">
+          <h2>Your Cart {cart.length > 0 && `(${cart.length})`}</h2>
+          <button className="icon-btn" onClick={onClose}><X size={17} /></button>
+        </div>
+
+        {/* Body */}
+        <div className="panel-body">
+          {cart.length === 0 ? (
+            <div className="empty-cart">
+              <ShoppingBag size={38} />
+              <p style={{ fontSize: '.875rem' }}>Your cart is empty</p>
+            </div>
+          ) : (
+            <>
+              {/* Cart Items */}
+              {cart.map((item, idx) => {
+                const itemPrice = getProductPrice(item.product, currency);
+                const firstImg = (item.product.media as any)?.images?.[0];
+                return (
+                  <div key={idx} className="ci">
+                    <div className="ci-img">
+                      {firstImg && <img src={firstImg} alt={item.product.name} />}
+                    </div>
+                    <div className="ci-info">
+                      <div className="ci-name">{item.product.name}</div>
+                      {item.variant && (
+                        <div className="ci-meta">{getVarKey(item.variant.attributes)}</div>
+                      )}
+                      {(item.addons?.length ?? 0) > 0 && (
+                        <div className="ci-addons">
+                          {item.addons.map(id => {
+                            const d = ADDON_DEFS[id];
+                            return (
+                              <span key={id} className="ci-atag">
+                                <d.Icon size={8} /> {d.label}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <div className="ci-bot">
+                        <span className="ci-price">{fmt(itemPrice * item.qty, currency)}</span>
+                        <div className="ci-actions">
+                          <div className="ci-qty">
+                            <button onClick={() => updQty(idx, -1)}><Minus size={10} /></button>
+                            <span style={{ padding: '0 .4rem', fontSize: '.8rem', fontWeight: 600 }}>{item.qty}</span>
+                            <button onClick={() => updQty(idx, 1)}><Plus size={10} /></button>
+                          </div>
+                          <button className="ci-rm" onClick={() => rm(idx)}><X size={12} /></button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Promo Code */}
+              <div className="promo-row">
+                <input
+                  className="promo-in"
+                  placeholder="Código promocional"
+                  value={promo}
+                  onChange={e => { setPromo(e.target.value); setPromoState({ status: 'idle' }); }}
+                  onKeyDown={e => e.key === 'Enter' && applyPromo()}
+                />
+                <button
+                  className="btn btn-sm"
+                  onClick={applyPromo}
+                  disabled={promoState.status === 'loading'}
+                >
+                  {promoState.status === 'loading' ? '...' : 'Aplicar'}
+                </button>
+              </div>
+              {promoState.status === 'ok' && (
+                <div className="promo-ok"><Check size={11} /> {promoState.message}</div>
+              )}
+              {promoState.status === 'err' && (
+                <div className="promo-err"><AlertCircle size={11} /> {promoState.message}</div>
+              )}
+
+              {/* Summary */}
+              <div className="summary">
+                <div className="sum-row"><span>Subtotal</span><span>{fmt(subtotal, currency)}</span></div>
+                {discount > 0 && (
+                  <div className="sum-row"><span>Descuento</span><span>−{fmt(discount, currency)}</span></div>
+                )}
+                <div className="sum-row">
+                  <span>Shipping</span>
+                  <span>{shipping === 0 ? 'Free 🎉' : fmt(shipping, currency)}</span>
+                </div>
+                {taxAmount > 0 && (
+                  <div className="sum-row">
+                    <span>ITBIS ({taxRate}%)</span>
+                    <span>{fmt(taxAmount, currency)}</span>
+                  </div>
+                )}
+                <div className="sum-row"><span>Total</span><span>{fmt(total, currency)}</span></div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        {cart.length > 0 && (
+          <div className="panel-ft">
+            {/* 
+              TODO: Conectar Stripe Checkout
+              Cuando se active:
+              1. Llamar POST /api/checkout con { amount: total, currency, items }
+              2. Usar Stripe Elements para completar el pago
+              3. En éxito: llamar createOrder() de storefront-api.ts
+              
+              Por ahora muestra botón con indicador "coming soon" 
+            */}
+            <button
+              className="btn btn-solid btn-full"
+              onClick={() => {
+                // Placeholder — checkout Stripe pendiente de configuración
+                alert('Checkout próximamente. 🚀\nStripe Integration: Fase 2');
+              }}
+            >
+              <CreditCard size={13} /> Checkout · {fmt(total, currency)}
+            </button>
+            <div className="secure">
+              <Shield size={10} />
+              Encrypted & secure · {STORES[storeId].flag} {currency}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
