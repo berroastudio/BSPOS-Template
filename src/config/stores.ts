@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import type { ElementType } from 'react';
 import type { Currency } from '../lib/storefront-api';
+export type { Currency };
 
 // ─── Store Config ─────────────────────────────────────────
 

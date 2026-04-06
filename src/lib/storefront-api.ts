@@ -52,7 +52,8 @@ export async function getActiveProducts(): Promise<Product[]> {
     .from('products')
     .select(`
       *,
-      variants (*)
+      variants (*),
+      categories!products_category_id_fkey (id, name, slug)
     `)
     .eq('status', 'active')
     .order('created_at', { ascending: false });
@@ -62,7 +63,12 @@ export async function getActiveProducts(): Promise<Product[]> {
     throw error;
   }
 
-  return (data || []) as Product[];
+  // Map category name from join for convenience
+  return (data || []).map((p: any) => ({
+    ...p,
+    category: p.categories?.name || p.category || null,
+    category_slug: p.categories?.slug || null,
+  })) as Product[];
 }
 
 /**
@@ -89,18 +95,84 @@ export async function getProductById(id: string): Promise<Product | null> {
 }
 
 /**
- * Obtiene las categorías únicas de los productos activos.
+ * Obtiene las categorías desde la tabla categories.
  */
-export async function getCategories(): Promise<string[]> {
-  const { data, error } = await supabase
-    .from('products')
-    .select('category')
-    .eq('status', 'active')
-    .not('category', 'is', null);
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+}
 
-  if (error) return [];
-  const cats = [...new Set((data || []).map(r => r.category).filter(Boolean))] as string[];
-  return cats.sort();
+export async function getCategories(): Promise<Category[]> {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('id, name, slug, description')
+    .eq('is_active', true)
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.error('[storefront-api] getCategories:', error);
+    return [];
+  }
+  return (data || []) as Category[];
+}
+
+/**
+ * Obtiene compatibilidad de un producto (carros, motos, etc.).
+ */
+export interface ProductCompat {
+  id: string;
+  item_type: string;
+  brand: string;
+  model: string;
+  submodel: string | null;
+  year_from: number | null;
+  year_to: number | null;
+  icon_key: string | null;
+}
+
+export async function getProductCompatibility(productId: string): Promise<ProductCompat[]> {
+  const { data, error } = await supabase
+    .from('product_compatibility')
+    .select('*')
+    .eq('product_id', productId)
+    .order('brand', { ascending: true });
+
+  if (error) {
+    console.error('[storefront-api] getProductCompat:', error);
+    return [];
+  }
+  return (data || []) as ProductCompat[];
+}
+
+/**
+ * Obtiene todos los addons activos desde la DB.
+ */
+export interface StorefrontAddon {
+  id: string;
+  code: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  price_usd: number;
+  price_dop: number;
+  price_eur: number;
+  is_custom_design: boolean;
+}
+
+export async function getAddons(): Promise<StorefrontAddon[]> {
+  const { data, error } = await supabase
+    .from('addons')
+    .select('id, code, name, description, icon, price_usd, price_dop, price_eur, is_custom_design')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    console.error('[storefront-api] getAddons:', error);
+    return [];
+  }
+  return (data || []) as StorefrontAddon[];
 }
 
 // ─── Clientes ────────────────────────────────────────────

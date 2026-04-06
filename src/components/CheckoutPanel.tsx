@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { X, ShoppingBag, Shield, CreditCard, Check, Minus, Plus, AlertCircle } from 'lucide-react';
+import { X, ShoppingBag, Shield, CreditCard, Check, Minus, Plus, AlertCircle, Loader } from 'lucide-react';
 import { STORES, ADDON_DEFS, fmt, getVarKey, type StoreId, type Currency } from '../config/stores';
 import { getProductPrice } from '../lib/storefront-api';
+import { redirectToCheckout, isStripeConfigured } from '../lib/stripe-checkout';
 import type { CartItem } from './ProductCard';
 
 interface CheckoutPanelProps {
@@ -21,6 +22,8 @@ type PromoState =
 export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: CheckoutPanelProps) {
   const [promo, setPromo] = useState('');
   const [promoState, setPromoState] = useState<PromoState>({ status: 'idle' });
+  const [checkingOut, setCheckingOut] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const subtotal = cart.reduce((s, item) => {
     const base = getProductPrice(item.product, currency) * item.qty;
@@ -175,23 +178,55 @@ export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: Che
         {/* Footer */}
         {cart.length > 0 && (
           <div className="panel-ft">
-            {/* 
-              TODO: Conectar Stripe Checkout
-              Cuando se active:
-              1. Llamar POST /api/checkout con { amount: total, currency, items }
-              2. Usar Stripe Elements para completar el pago
-              3. En éxito: llamar createOrder() de storefront-api.ts
-              
-              Por ahora muestra botón con indicador "coming soon" 
-            */}
+            {checkoutError && (
+              <div style={{ fontSize: '.75rem', color: '#e05b4b', marginBottom: '.5rem', display: 'flex', alignItems: 'center', gap: '.3rem' }}>
+                <AlertCircle size={12} /> {checkoutError}
+              </div>
+            )}
             <button
               className="btn btn-solid btn-full"
-              onClick={() => {
-                // Placeholder — checkout Stripe pendiente de configuración
-                alert('Checkout próximamente. 🚀\nStripe Integration: Fase 2');
+              disabled={checkingOut}
+              onClick={async () => {
+                setCheckingOut(true);
+                setCheckoutError(null);
+                try {
+                  if (!isStripeConfigured()) {
+                    setCheckoutError('Stripe no configurado. Añade VITE_STRIPE_PUBLISHABLE_KEY en .env.local con tu pk_live_...');
+                    setCheckingOut(false);
+                    return;
+                  }
+
+                  const media = (p: any) => {
+                    const imgs = p.media?.images || [];
+                    return imgs[0] || undefined;
+                  };
+
+                  await redirectToCheckout({
+                    currency: currency.toLowerCase(),
+                    items: cart.map(item => ({
+                      name: item.product.name + (item.variant ? ` (${Object.values((item.variant as any).attributes || {}).join(' / ')})` : ''),
+                      price: getProductPrice(item.product, currency),
+                      quantity: item.qty,
+                      image: media(item.product),
+                      product_id: item.product.id,
+                      variant_id: (item.variant as any)?.id,
+                    })),
+                    metadata: {
+                      store: storeId,
+                      promo: promoState.status === 'ok' ? promoState.promoId : '',
+                    },
+                  });
+                } catch (err: any) {
+                  setCheckoutError(err.message || 'Error al iniciar checkout');
+                  setCheckingOut(false);
+                }
               }}
             >
-              <CreditCard size={13} /> Checkout · {fmt(total, currency)}
+              {checkingOut ? (
+                <><Loader size={13} className="spin" /> Procesando...</>
+              ) : (
+                <><CreditCard size={13} /> Checkout · {fmt(total, currency)}</>
+              )}
             </button>
             <div className="secure">
               <Shield size={10} />

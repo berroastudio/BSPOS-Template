@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import {
   ChevronLeft, ShoppingBag, Shield, Tag, Star,
-  Package, Leaf, Droplets, Recycle, Plus, Minus, Gift,
+  Package, Leaf, Droplets, Recycle, Plus, Minus, Gift, Car, Bike,
 } from 'lucide-react';
 import { VariantSelector, AddonBadges } from './VariantSelector';
 import { STORES, ADDON_DEFS, fmt, type StoreId, type Currency } from '../config/stores';
-import { getProductPrice, getCompareAtPrice } from '../lib/storefront-api';
+import { getProductPrice, getCompareAtPrice, getProductCompatibility, type ProductCompat } from '../lib/storefront-api';
 import type { Product, Variant } from '../types/database';
 
 interface ProductDetailProps {
@@ -21,6 +21,11 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
   const [sv, setSV] = useState<Variant | null>(product.variants?.[0] || null);
   const [addons, setAddons] = useState<string[]>([]);
   const [qty, setQty] = useState(1);
+  const [compats, setCompats] = useState<ProductCompat[]>([]);
+
+  useEffect(() => {
+    getProductCompatibility(product.id).then(setCompats).catch(() => {});
+  }, [product.id]);
 
   const media = product.media as any;
   const imgs: string[] = media?.images || [];
@@ -167,6 +172,32 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
                   return (
                     <div key={i} className="sustain-li">
                       <I size={13} /><span>{s}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {/* Compatibility */}
+          {compats.length > 0 && (
+            <>
+              <div className="sec"><Car size={10} /> Compatible con</div>
+              <div className="compat-grid">
+                {compats.map(c => {
+                  const CompatIcon = c.item_type === 'motorcycle' || c.item_type === 'moto' ? Bike : Car;
+                  const yearStr = c.year_from && c.year_to
+                    ? `${c.year_from}–${c.year_to}`
+                    : c.year_from ? `${c.year_from}+` : '';
+                  return (
+                    <div key={c.id} className="compat-item">
+                      <CompatIcon size={14} />
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '.78rem' }}>{c.brand} {c.model}</div>
+                        <div style={{ fontSize: '.68rem', color: 'var(--muted)' }}>
+                          {c.submodel && `${c.submodel} · `}{yearStr}
+                        </div>
+                      </div>
                     </div>
                   );
                 })}

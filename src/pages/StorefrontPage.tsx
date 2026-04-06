@@ -5,7 +5,7 @@ import { ProductCard, type CartItem } from '../components/ProductCard';
 import { ProductDetail } from '../components/ProductDetail';
 import { CheckoutPanel } from '../components/CheckoutPanel';
 import { Toast } from '../components/Toast';
-import { getActiveProducts } from '../lib/storefront-api';
+import { getActiveProducts, getCategories, type Category } from '../lib/storefront-api';
 import { STORES, type StoreId, type Currency } from '../config/stores';
 import type { Product, Variant } from '../types/database';
 
@@ -44,8 +44,10 @@ export function StorefrontPage() {
 
   // Data from Supabase
   const [products, setProducts] = useState<Product[]>([]);
+  const [dbCategories, setDbCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQ, setSearchQ] = useState('');
 
   const currency: Currency = STORES[storeId].currency;
 
@@ -54,21 +56,22 @@ export function StorefrontPage() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // ─── Load products from Supabase ───────────────────────
+  // ─── Load products + categories from Supabase ──────────
   useEffect(() => {
     let mounted = true;
     setLoading(true);
     setError(null);
 
-    getActiveProducts()
-      .then(data => {
+    Promise.all([getActiveProducts(), getCategories()])
+      .then(([prods, cats]) => {
         if (mounted) {
-          setProducts(data);
+          setProducts(prods);
+          setDbCategories(cats);
           setLoading(false);
         }
       })
       .catch(err => {
-        console.error('[StorefrontPage] Error loading products:', err);
+        console.error('[StorefrontPage] Error loading:', err);
         if (mounted) {
           setError('No se pudieron cargar los productos. Revisa la conexión.');
           setLoading(false);
@@ -79,13 +82,15 @@ export function StorefrontPage() {
   }, []);
 
   // ─── Derived state ─────────────────────────────────────
-  const categories = ['All', ...Array.from(
-    new Set(products.map(p => p.category).filter(Boolean))
-  ) as string[]];
+  const categoryNames = ['All', ...dbCategories.map(c => c.name)];
 
-  const filtered = filter === 'All'
-    ? products
-    : products.filter(p => p.category === filter);
+  const filtered = products.filter(p => {
+    const matchCat = filter === 'All' || p.category === filter;
+    const matchSearch = !searchQ || p.name.toLowerCase().includes(searchQ.toLowerCase())
+      || (p.description || '').toLowerCase().includes(searchQ.toLowerCase())
+      || (p.tags || []).some(t => t.toLowerCase().includes(searchQ.toLowerCase()));
+    return matchCat && matchSearch;
+  });
 
   // ─── Handlers ──────────────────────────────────────────
   const openProduct = (p: Product) => {
@@ -118,24 +123,23 @@ export function StorefrontPage() {
 
       {/* Navigation */}
       <nav className="nav">
-        <span className="nav-logo" onClick={() => setView('grid')}>
+        <span className="nav-logo" onClick={() => { setView('grid'); setFilter('All'); }}>
           Berroa <em>Studio</em>
         </span>
         <div className="nav-links">
-          {['New Arrivals', 'Clothing', 'Home', 'Sale', 'About'].map(l => (
+          {dbCategories.slice(0, 5).map(cat => (
             <span
-              key={l}
-              className="nav-link"
+              key={cat.id}
+              className={`nav-link${filter === cat.name ? ' active' : ''}`}
               onClick={() => {
-                if (['Clothing', 'Home'].includes(l)) {
-                  setFilter(l);
-                  setView('grid');
-                }
+                setFilter(cat.name);
+                setView('grid');
               }}
             >
-              {l}
+              {cat.name}
             </span>
           ))}
+          <span className="nav-link" onClick={() => { setFilter('All'); setView('grid'); }}>All</span>
         </div>
         <div className="nav-right">
           <button className="icon-btn" aria-label="Search">
@@ -169,7 +173,7 @@ export function StorefrontPage() {
             {/* Filter bar */}
             <div className="filter-bar">
               <div className="pills">
-                {categories.map(c => (
+                {categoryNames.map(c => (
                   <button
                     key={c}
                     className={`pill${filter === c ? ' active' : ''}`}
