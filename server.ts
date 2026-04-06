@@ -1,6 +1,7 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
+import fs from "fs";
 import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
 
@@ -25,7 +26,7 @@ function getSupabaseAdmin() {
 
 async function startServer() {
   const app = express();
-  const PORT = process.env.PORT || 3001;
+  const PORT = 4000; // Cambiado a 4000 para mayor claridad
 
   app.use(express.json());
 
@@ -42,6 +43,8 @@ async function startServer() {
     try {
       const { code, subtotal, currency } = req.body;
       if (!code) return res.status(400).json({ valid: false, message: 'Código requerido' });
+
+      console.log(`[Promo] Validating: ${code} for ${subtotal} ${currency}`);
 
       const supabase = getSupabaseAdmin();
       const { data: promo, error } = await supabase
@@ -80,9 +83,6 @@ async function startServer() {
         discountAmount = (subtotal * promo.value) / 100;
       } else if (promo.type === 'fixed_amount') {
         discountAmount = promo.value;
-      } else if (promo.type === 'shipping') {
-        // El frontend maneja el envío gratis si valid: true y promo.type === 'shipping'
-        discountAmount = 0; 
       }
 
       res.json({
@@ -103,12 +103,30 @@ async function startServer() {
   // VITE MIDDLEWARE (Frontend)
   // ==========================================
   if (process.env.NODE_ENV !== "production") {
+    // Configurar Vite middleware
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: "spa",
+      appType: "custom", // Usamos custom para manejar el index.html manualmente
     });
+    
     app.use(vite.middlewares);
+
+    // Catch-all para servir index.html (SPA)
+    app.use('*', async (req, res, next) => {
+      const url = req.originalUrl;
+      try {
+        let template = fs.readFileSync(path.resolve(process.cwd(), 'index.html'), 'utf-8');
+        template = await vite.transformIndexHtml(url, template);
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+      } catch (e: any) {
+        vite.ssrFixStacktrace(e);
+        console.error('[Vite Middleware Error]:', e);
+        next(e);
+      }
+    });
+
   } else {
+    // Modo producción: Servir archivos estáticos de dist
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath));
     app.get('*', (req, res) => {
@@ -117,8 +135,11 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Storefront running on http://localhost:${PORT}`);
+    console.log(`\n🚀 Storefront running on http://localhost:${PORT}`);
+    console.log(`📦 Serving files from ${process.cwd()}\n`);
   });
 }
 
-startServer();
+startServer().catch(err => {
+  console.error("Failed to start server:", err);
+});
