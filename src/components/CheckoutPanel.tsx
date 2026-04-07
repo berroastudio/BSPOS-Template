@@ -28,6 +28,10 @@ export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: Che
   const [checkingOut, setCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [inventoryMap, setInventoryMap] = useState<Record<string, number>>({});
+  
+  // Shipping & Logistics states
+  const [carrierId, setCarrierId] = useState('flash_delivery');
+  const [customShippingPrice, setCustomShippingPrice] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchInv = async () => {
@@ -60,8 +64,12 @@ export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: Che
   const shipping = (subtotal - discount) > freeShippingThreshold ? 0 : shippingBase;
 
   const taxRate = STORES[storeId].tax_rate || 0;
-  const taxAmount = taxRate > 0 ? ((subtotal - discount + shipping) * taxRate) / 100 : 0;
-  const total = subtotal - discount + shipping + taxAmount;
+  
+  // Use custom shipping price if edited, otherwise calculated shipping
+  const actualShipping = customShippingPrice !== null ? customShippingPrice : shipping;
+  
+  const taxAmount = taxRate > 0 ? ((subtotal - discount + actualShipping) * taxRate) / 100 : 0;
+  const total = subtotal - discount + actualShipping + taxAmount;
 
   const updQty = (idx: number, d: number) =>
     setCart(c => c.map((it, i) => i === idx ? { ...it, qty: Math.max(1, it.qty + d) } : it));
@@ -201,9 +209,34 @@ export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: Che
                 {discount > 0 && (
                   <div className="sum-row"><span>Descuento</span><span>−{fmt(discount, currency)}</span></div>
                 )}
-                <div className="sum-row">
-                  <span>Shipping</span>
-                  <span>{shipping === 0 ? 'Free 🎉' : fmt(shipping, currency)}</span>
+                <div className="sum-row" style={{ flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border)', paddingTop: '12px', marginTop: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                    <span>Shipping ({carrierId})</span>
+                    <span>{actualShipping === 0 ? 'Free 🎉' : fmt(actualShipping, currency)}</span>
+                  </div>
+                  
+                  {/* Delivery Selection UI */}
+                  <div style={{ display: 'flex', gap: '8px', width: '100%', marginBottom: '4px' }}>
+                    <select 
+                      className="promo-in" 
+                      style={{ flex: 1, padding: '4px 8px', fontSize: '0.75rem' }}
+                      value={carrierId}
+                      onChange={(e) => setCarrierId(e.target.value)}
+                    >
+                      <option value="flash_delivery">Flash Delivery (BS)</option>
+                      <option value="uber_flash">Uber Flash</option>
+                      <option value="indriver">InDrive / Mensajería</option>
+                      <option value="pickup">Recogida Personal</option>
+                    </select>
+                    <input 
+                      type="number"
+                      className="promo-in"
+                      style={{ width: '80px', padding: '4px 8px', fontSize: '0.75rem' }}
+                      placeholder="Precio"
+                      value={customShippingPrice ?? ''}
+                      onChange={(e) => setCustomShippingPrice(e.target.value === '' ? null : Number(e.target.value))}
+                    />
+                  </div>
                 </div>
                 {taxAmount > 0 && (
                   <div className="sum-row">
@@ -260,6 +293,9 @@ export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: Che
                       customer_clerk_id: user?.id || '',
                       tenant_id: STORES[storeId].tenant_id || '',
                     },
+                    userId: user?.id,
+                    shipping_price: actualShipping,
+                    carrier_id: carrierId
                   });
                 } catch (err: any) {
                   setCheckoutError(err.message || 'Error al iniciar checkout');

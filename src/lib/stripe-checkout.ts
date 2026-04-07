@@ -5,9 +5,7 @@
 // ============================================================
 
 const STRIPE_PK = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '';
-const CHECKOUT_URL = import.meta.env.VITE_SUPABASE_URL
-  ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`
-  : '';
+const CHECKOUT_URL = '/api/checkout/create-session';
 const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 export interface CheckoutItem {
@@ -23,18 +21,14 @@ export interface CheckoutRequest {
   items: CheckoutItem[];
   currency: string;    // 'usd', 'dop', 'eur'
   customer_email?: string;
-  metadata?: Record<string, string>;
+  metadata?: Record<string, any>;
+  shipping_price?: number;
+  carrier_id?: string;
+  userId?: string; // Clerk User ID
 }
 
 /**
  * Crea una Session de Stripe Checkout y redirige al cliente.
- * El pago se procesa en stripe.com — no se manejan tarjetas localmente.
- *
- * Flujo:
- * 1. POST a Edge Function → crea Stripe Session → devuelve URL
- * 2. window.location.href = sessionUrl (redirect a stripe.com)
- * 3. Stripe procesa pago → redirect a /checkout/success o /checkout/cancelled
- * 4. Webhook en backend crea la orden en Supabase
  */
 export async function redirectToCheckout(request: CheckoutRequest): Promise<void> {
   if (!STRIPE_PK) {
@@ -45,13 +39,11 @@ export async function redirectToCheckout(request: CheckoutRequest): Promise<void
     throw new Error('URL de checkout no configurada.');
   }
 
-  // 1. Llamar a nuestra Edge Function para crear la Session
+  // 1. Llamar a nuestro backend de Node para crear la Session
   const response = await fetch(CHECKOUT_URL, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'apikey': SUPABASE_ANON,
-      'Authorization': `Bearer ${SUPABASE_ANON}`,
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({
       items: request.items.map(item => ({
@@ -66,7 +58,14 @@ export async function redirectToCheckout(request: CheckoutRequest): Promise<void
       customer_email: request.customer_email,
       success_url: `${window.location.origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${window.location.origin}/checkout/cancelled`,
-      metadata: request.metadata || {},
+      metadata: {
+        ...(request.metadata || {}),
+        customer_clerk_id: request.userId,
+        carrier_id: request.carrier_id,
+        shipping_cost: request.shipping_price
+      },
+      shipping_price: request.shipping_price,
+      carrier_id: request.carrier_id
     }),
   });
 
