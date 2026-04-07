@@ -115,7 +115,27 @@ async function startServer() {
   // Endpoint de Contacto
   app.post("/api/contact", async (req, res) => {
     try {
-      const { name, email, subject, message } = req.body;
+      const { name, email, subject, message, turnstileToken } = req.body;
+
+      // Cloudflare Turnstile Validation
+      if (!turnstileToken) {
+        return res.status(400).json({ success: false, message: 'Verificación de seguridad requerida' });
+      }
+
+      const turnstileSecret = process.env.TURNSTILE_SECRET_KEY || '1x0000000000000000000000000000000AA';
+      const turnstileRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          secret: turnstileSecret,
+          response: turnstileToken
+        }).toString()
+      });
+
+      const turnstileData = await turnstileRes.json();
+      if (!turnstileData.success) {
+        return res.status(400).json({ success: false, message: 'Fallo al verificar que eres humano.' });
+      }
 
       // Validación básica
       if (!name || !email || !subject || !message) {

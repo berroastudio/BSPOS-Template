@@ -21,11 +21,16 @@ export function ContactPage() {
     e.preventDefault();
     setIsSubmitting(true);
     
+    // Extraer el token inyectado por Turnstile
+    const formElement = e.target as HTMLFormElement;
+    const formDataObj = new FormData(formElement);
+    const turnstileToken = formDataObj.get('cf-turnstile-response');
+
     try {
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({ ...formData, turnstileToken })
       });
 
       if (response.ok) {
@@ -159,6 +164,14 @@ export function ContactPage() {
                   className="form-input"
                 />
               </div>
+
+              {/* Cloudflare Turnstile Invisible Widget */}
+              <div 
+                className="cf-turnstile" 
+                data-sitekey="0x4AAAAAAC15jMWuWb8r3Bcg"
+                data-action="contact_form"
+                style={{ marginBottom: '1rem' }}
+              ></div>
 
               {submitStatus === 'success' && (
                 <motion.div
