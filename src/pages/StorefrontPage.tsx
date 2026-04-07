@@ -145,6 +145,7 @@ export function StorefrontPage({ defaultView }: StorefrontPageProps) {
             </span>
           ))}
           <span className="nav-link" onClick={() => { setFilter('All'); setView('grid'); }}>All</span>
+          <span className="nav-link" onClick={() => window.location.href = '/contact'}>Contacto</span>
         </div>
         <div className="nav-right">
           <button className="icon-btn" aria-label="Search">

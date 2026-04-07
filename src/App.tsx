@@ -4,6 +4,9 @@ import { StorefrontPage } from './pages/StorefrontPage';
 import { CheckoutSuccess } from './pages/CheckoutSuccess';
 import { CheckoutCancelled } from './pages/CheckoutCancelled';
 import { MyAccountPage } from './pages/MyAccountPage';
+import { ContactPage } from './pages/ContactPage';
+import { PrivacyPage } from './pages/PrivacyPage';
+import { CookieBanner } from './components/CookieBanner';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -44,6 +47,8 @@ function SubdomainRouter() {
   return (
     <Routes>
       <Route path="/" element={<StorefrontPage />} />
+      <Route path="/contact" element={<ContactPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/my-account" element={
         <>
           <SignedIn><MyAccountPage /></SignedIn>
@@ -80,6 +85,7 @@ export default function App() {
             <SubdomainRouter />
           </motion.div>
         </AnimatePresence>
+        <CookieBanner />
       </BrowserRouter>
     </ClerkProvider>
   );

@@ -30,6 +30,15 @@ async function startServer() {
 
   app.use(express.json());
 
+  // Middleware para CSP headers (desarrollo)
+  app.use((req, res, next) => {
+    res.setHeader(
+      'Content-Security-Policy',
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://*.clerk.accounts.dev https://clerk.berroastudio.com https://ecommerce.berroastudio.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.clerk.accounts.dev https://ecommerce.berroastudio.com https://clerk.berroastudio.com wss://clerk.berroastudio.com https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: https://*.supabase.co https://*.stripe.com https://*.gstatic.com https://*.google.com https://raw.githubusercontent.com; font-src 'self' data: https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; frame-src 'self' https://js.stripe.com; worker-src 'self' blob:;"
+    );
+    next();
+  });
+
   // ==========================================
   // API ROUTES (Backend)
   // ==========================================
@@ -100,6 +109,69 @@ async function startServer() {
     } catch (error: any) {
       console.error('Error validating promo:', error);
       res.status(500).json({ valid: false, message: 'Error interno del servidor' });
+    }
+  });
+
+  // Endpoint de Contacto
+  app.post("/api/contact", async (req, res) => {
+    try {
+      const { name, email, subject, message } = req.body;
+
+      // Validación básica
+      if (!name || !email || !subject || !message) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Todos los campos son requeridos' 
+        });
+      }
+
+      // Validación de email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Email inválido' 
+        });
+      }
+
+      const supabase = getSupabaseAdmin();
+
+      // Guardar el mensaje de contacto en Supabase
+      const { data, error } = await supabase
+        .from('contact_messages')
+        .insert({
+          name,
+          email,
+          subject,
+          message,
+          status: 'new',
+          created_at: new Date().toISOString()
+        });
+
+      if (error) {
+        console.error('[Contact Error]:', error);
+        return res.status(500).json({ 
+          success: false, 
+          message: 'Error al guardar el mensaje' 
+        });
+      }
+
+      // Aquí puedes agregar envío de email usando un servicio como SendGrid, Resend, etc.
+      // Por ahora solo guardamos en la base de datos
+      console.log(`[Contact] Nuevo mensaje de ${name} (${email}): ${subject}`);
+
+      res.json({ 
+        success: true, 
+        message: 'Mensaje enviado exitosamente',
+        data 
+      });
+
+    } catch (error: any) {
+      console.error('Error en contacto:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Error interno del servidor' 
+      });
     }
   });
 
