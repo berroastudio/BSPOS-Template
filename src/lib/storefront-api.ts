@@ -73,25 +73,47 @@ export async function getActiveProducts(): Promise<Product[]> {
 
 /**
  * Obtiene el inventario actual para una variante o producto.
+ * Primero intenta desde la tabla inventory, luego usa inventory_quantity de variants.
  */
 export async function getInventory(variantId: string): Promise<{ quantity: number; reserved: number; available: number } | null> {
-  const { data, error } = await supabase
-    .from('inventory')
-    .select('quantity, reserved, available_stock')
-    .eq('variant_id', variantId)
-    .single() as any;
+  try {
+    // Intentar desde tabla inventory primero
+    const { data: invData, error: invError } = await supabase
+      .from('inventory')
+      .select('quantity, reserved, available_stock')
+      .eq('variant_id', variantId)
+      .single() as any;
 
-  if (error) {
-    if (error.code === 'PGRST116') return null;
-    console.error('[storefront-api] getInventory:', error);
+    if (invData && !invError) {
+      return {
+        quantity: invData.quantity,
+        reserved: invData.reserved || 0,
+        available: invData.available_stock || (invData.quantity - (invData.reserved || 0))
+      };
+    }
+
+    // Fallback: obtener desde variants.inventory_quantity
+    const { data: variantData, error: variantError } = await supabase
+      .from('variants')
+      .select('inventory_quantity')
+      .eq('id', variantId)
+      .single() as any;
+
+    if (!variantError && variantData) {
+      const qty = variantData.inventory_quantity || 0;
+      return {
+        quantity: qty,
+        reserved: 0,
+        available: qty
+      };
+    }
+
+    console.warn(`[storefront-api] No inventory found for variant ${variantId}`);
+    return null;
+  } catch (error) {
+    console.error('[storefront-api] getInventory error:', error);
     return null;
   }
-
-  return {
-    quantity: data.quantity,
-    reserved: data.reserved || 0,
-    available: data.available_stock || (data.quantity - (data.reserved || 0))
-  };
 }
 
 /**
@@ -245,10 +267,30 @@ export async function createOrder(
 ): Promise<Order | null> {
   const tenantId = await getDefaultTenantId();
 
-  // 1. Crear la orden
+  // Calculate totals from items
+  const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+  const tax = Number(orderData.tax) || 0;
+  const shippingCost = Number(orderData.shipping_cost) || 0;
+  const discount = Number(orderData.discount) || 0;
+  
+  // Set total_amount if not provided
+  const totalAmount = orderData.total_amount || (subtotal - discount + tax + shippingCost);
+
+  // 1. Create order with complete financial data
+  const orderPayload = {
+    ...orderData,
+    tenant_id: tenantId,
+    subtotal,
+    tax: tax || Number(orderData.tax) || 0,
+    shipping_cost: shippingCost,
+    discount: discount,
+    total_amount: totalAmount,
+    total: totalAmount // Ensure both fields are set
+  };
+
   const { data: order, error: orderError } = await supabase
     .from('orders')
-    .insert({ ...orderData, tenant_id: tenantId } as any)
+    .insert(orderPayload as any)
     .select()
     .single() as any;
 
@@ -257,7 +299,7 @@ export async function createOrder(
     throw orderError;
   }
 
-  // 2. Insertar order items
+  // 2. Insert order items
   const orderItems = items.map(item => ({
     order_id: order.id,
     product_id: item.product_id,
