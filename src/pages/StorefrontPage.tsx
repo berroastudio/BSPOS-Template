@@ -32,14 +32,18 @@ function SkeletonGrid() {
 
 // ─── Main Storefront Page ─────────────────────────────────
 
-export function StorefrontPage() {
+interface StorefrontPageProps {
+  defaultView?: 'grid' | 'detail' | 'cart';
+}
+
+export function StorefrontPage({ defaultView }: StorefrontPageProps) {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [storeId, setStoreId] = useState<StoreId>('usa');
   const [view, setView] = useState<View>('grid');
   const [selected, setSelected] = useState<Product | null>(null);
   const [filter, setFilter] = useState('All');
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [cartOpen, setCartOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(defaultView === 'cart');
   const [toast, setToast] = useState<string | null>(null);
 
   // Data from Supabase
@@ -145,7 +149,11 @@ export function StorefrontPage() {
           <button className="icon-btn" aria-label="Search">
             <Search size={16} />
           </button>
-          <button className="icon-btn" aria-label="Account">
+          <button 
+            className="icon-btn" 
+            aria-label="Account"
+            onClick={() => window.location.pathname === '/my-account' ? null : window.location.href = '/my-account'}
+          >
             <User size={16} />
           </button>
           <button
