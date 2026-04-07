@@ -7,14 +7,21 @@ import { VariantSelector, AddonBadges } from './VariantSelector';
 import { STORES, ADDON_DEFS, fmt, type StoreId, type Currency } from '../config/stores';
 import { getProductPrice, getCompareAtPrice, getProductCompatibility, type ProductCompat } from '../lib/storefront-api';
 import type { Product, Variant } from '../types/database';
+import { TopperEditor, type TopperState } from './TopperEditor';
 
 interface ProductDetailProps {
   product: Product;
   storeId: StoreId;
   currency: Currency;
   onBack: () => void;
-  onAddToCart: (product: Product, variant: Variant | null, addons: string[], qty: number) => void;
+  onAddToCart: (product: Product, variant: Variant | null, addons: string[], qty: number, metadata?: any) => void;
 }
+
+const TOPPER_SIZE_PRICES: Record<string, Record<Currency, number>> = {
+  'Pequeño': { USD: 15, DOP: 900 },
+  'Mediano': { USD: 22, DOP: 1300 },
+  'Grande': { USD: 28, DOP: 1650 },
+};
 
 export function ProductDetail({ product, storeId, currency, onBack, onAddToCart }: ProductDetailProps) {
   const [imgIdx, setImgIdx] = useState(0);
@@ -23,6 +30,9 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
   const [qty, setQty] = useState(1);
   const [compats, setCompats] = useState<ProductCompat[]>([]);
   const [realStock, setRealStock] = useState<number | null>(null);
+  const [topperState, setTopperState] = useState<TopperState | null>(null);
+
+  const isTopper = product.category?.toLowerCase() === 'toppers' || product.category?.toLowerCase() === 'topper';
 
   useEffect(() => {
     getProductCompatibility(product.id).then(setCompats).catch(() => {});
@@ -55,10 +65,16 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
   const addonAmt = addons.reduce(
     (s, id) => s + (ADDON_DEFS[id]?.price[currency] || 0), 0
   );
-  const unit = getProductPrice(product, currency);
+
+  // Price calculation
+  let unit = getProductPrice(product, currency);
+  if (isTopper && topperState) {
+    unit = TOPPER_SIZE_PRICES[topperState.sizeLabel]?.[currency] || unit;
+  }
+
   const compareAt = getCompareAtPrice(product, currency);
   const total = (unit + addonAmt) * qty;
-  const stock = realStock ?? sv?.inventory_quantity ?? 0;
+  const stock = isTopper ? 999 : (realStock ?? sv?.inventory_quantity ?? 0);
   const save = compareAt && compareAt > unit ? compareAt - unit : 0;
   const store = STORES[storeId];
 
@@ -71,35 +87,41 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
         <ChevronLeft size={13} /> All Products
       </div>
 
-      <div className="detail-grid">
-        {/* Gallery */}
-        <div>
-          <div className="gal-main">
-            {imgs.length > 0 ? (
-              <img src={imgs[imgIdx]} alt={product.name} key={imgIdx} />
-            ) : (
-              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: '.875rem' }}>
-                No image
+      <div className={isTopper ? "topper-layout" : "detail-grid"}>
+        {/* Visual Area */}
+        {isTopper ? (
+          <div className="topper-editor-section">
+            <TopperEditor currency={currency} onStateChange={setTopperState} />
+          </div>
+        ) : (
+          <div>
+            <div className="gal-main">
+              {imgs.length > 0 ? (
+                <img src={imgs[imgIdx]} alt={product.name} key={imgIdx} />
+              ) : (
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: '.875rem' }}>
+                  No image
+                </div>
+              )}
+            </div>
+            {imgs.length > 1 && (
+              <div className="gal-thumbs">
+                {imgs.map((src, i) => (
+                  <div
+                    key={i}
+                    className={`thumb${imgIdx === i ? ' active' : ''}`}
+                    onClick={() => setImgIdx(i)}
+                  >
+                    <img src={src} alt="" />
+                  </div>
+                ))}
               </div>
             )}
           </div>
-          {imgs.length > 1 && (
-            <div className="gal-thumbs">
-              {imgs.map((src, i) => (
-                <div
-                  key={i}
-                  className={`thumb${imgIdx === i ? ' active' : ''}`}
-                  onClick={() => setImgIdx(i)}
-                >
-                  <img src={src} alt="" />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        )}
 
-        {/* Info */}
-        <div>
+        {/* Info & Sidebar */}
+        <div className={isTopper ? "topper-sidebar" : ""}>
           <div className="info-title-row">
             <h1 className="info-title">{product.name}</h1>
             <div className="tags">
@@ -119,12 +141,19 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
             )}
           </div>
 
-          {product.description && (
+          {product.description && !isTopper && (
             <p className="detail-desc">{product.description}</p>
           )}
 
+          {/* Sizing description for toppers */}
+          {isTopper && topperState && (
+            <div className="topper-size-info">
+               Este topper de tamaño <strong>{topperState.sizeLabel}</strong> incluye personalización de 2 líneas con la fuente <strong>{topperState.fontFamily}</strong>.
+            </div>
+          )}
+
           {/* Variants */}
-          {(product.variants?.length ?? 0) > 0 && (
+          {!isTopper && (product.variants?.length ?? 0) > 0 && (
             <>
               <div className="sec"><Tag size={10} /> Variants</div>
               <VariantSelector product={product} onVariantChange={setSV} />
@@ -150,7 +179,7 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
           )}
 
           {/* Dimensions */}
-          {dimKeys.length > 0 && (
+          {dimKeys.length > 0 && !isTopper && (
             <>
               <div className="sec"><Package size={10} /> Dimensions</div>
               <table className="dim-table">
@@ -237,14 +266,14 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
                 ? '✗ Out of stock'
                 : stock <= 3
                   ? `⚠ Only ${stock} left`
-                  : `${stock} in stock`}
+                  : isTopper ? 'Hecho a mano bajo pedido' : `${stock} in stock`}
             </span>
           </div>
 
           <button
             className="btn btn-solid btn-full"
             disabled={stock <= 0}
-            onClick={() => onAddToCart(product, sv, addons, qty)}
+            onClick={() => onAddToCart(product, sv, addons, qty, isTopper ? topperState : undefined)}
           >
             <ShoppingBag size={13} /> Add to Cart · {fmt(total, currency)}
           </button>
@@ -264,3 +293,37 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
     </div>
   );
 }
+
+const styles = `
+  .topper-layout {
+     display: flex;
+     flex-direction: column;
+     gap: 2rem;
+  }
+  @media (min-width: 1100px) {
+    .topper-layout { 
+       display: grid; 
+       grid-template-columns: 1fr 340px; 
+       gap: 3rem;
+    }
+  }
+  .topper-size-info {
+     font-size: 0.82rem;
+     background: var(--bg2);
+     padding: 1rem;
+     border-radius: var(--r);
+     border-left: 3px solid var(--accent);
+     margin-bottom: 1.5rem;
+     line-height: 1.5;
+  }
+  .topper-sidebar {
+     border: 1px solid var(--border);
+     padding: 1.5rem;
+     border-radius: var(--r-lg);
+     background: var(--card);
+     position: sticky;
+     top: 100px;
+  }
+`;
+
+document.head.appendChild(Object.assign(document.createElement('style'), { textContent: styles }));

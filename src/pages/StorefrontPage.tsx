@@ -104,8 +104,8 @@ export function StorefrontPage({ defaultView }: StorefrontPageProps) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const addToCart = (product: Product, variant: Variant | null, addons: string[], qty = 1) => {
-    setCart(c => [...c, { product, variant, addons, qty }]);
+  const addToCart = (product: Product, variant: Variant | null, addons: string[], qty = 1, metadata?: any) => {
+    setCart(c => [...c, { product, variant, addons, qty, metadata }]);
     showToast(`${product.name} added ✓`);
   };
 
