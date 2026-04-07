@@ -24,6 +24,7 @@ export interface StoreConfig {
   description: string;
   addons: string[];
   tax_rate?: number;
+  tenant_id: string;
 }
 
 export const STORES: Record<StoreId, StoreConfig> = {
@@ -36,6 +37,7 @@ export const STORES: Record<StoreId, StoreConfig> = {
     country: 'US',
     description: 'Worldwide shipping from New York',
     addons: ['personalization', 'gift_wrap', 'same_day', 'shipping'],
+    tenant_id: '685b0373-1002-4148-8df0-eec1287114b3', // USA (Mock or Actual if known)
   },
   rd: {
     id: 'rd',
@@ -47,6 +49,7 @@ export const STORES: Record<StoreId, StoreConfig> = {
     tax_rate: 18,
     description: 'Punto físico en Herrera, Santo Domingo',
     addons: ['personalization', 'gift_wrap', 'pickup', 'shipping'],
+    tenant_id: '685b0373-1002-4148-8df0-eec1287114b3', // Main tenant (Dominican Republic)
   },
 };
 

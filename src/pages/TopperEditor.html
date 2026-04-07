@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cake Topper Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Dancing+Script:wght@700&family=Pacifico&family=Sacramento&family=Pinyon+Script&family=Alex+Brush&family=Allura&family=Yellowtail&family=Italianno&family=Herr+Von+Muellerhoff&family=Lovers+Quarrel&family=Monsieur+La+Doulaise&family=Cedarville+Cursive&family=Euphoria+Script&family=Mr+Dafoe&family=Rozha+One&family=Lobster&family=Fredoka+One&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a1f;
+    color: #f0ece4;
+    font-family: 'Fredoka One', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    background: #111116;
+    border-bottom: 1px solid #2e2e3a;
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  header h1 {
+    font-family: 'Great Vibes', cursive;
+    font-size: 2rem;
+    color: #f5c842;
+    letter-spacing: 1px;
+  }
+
+  header span {
+    font-size: 0.75rem;
+    color: #777;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 4px;
+  }
+
+  .app {
+    display: flex;
+    flex: 1;
+    height: calc(100vh - 64px);
+  }
+
+  /* === PANEL IZQUIERDO === */
+  .panel {
+    width: 320px;
+    background: #111116;
+    border-right: 1px solid #2e2e3a;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    flex-shrink: 0;
+  }
+
+  .section-title {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: #555;
+    margin-bottom: 10px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 0.75rem;
+    color: #999;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  input[type="text"], textarea, select {
+    width: 100%;
+    background: #1e1e26;
+    border: 1px solid #2e2e3a;
+    border-radius: 8px;
+    color: #f0ece4;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    outline: none;
+    transition: border 0.2s;
+  }
+
+  input[type="text"]:focus, textarea:focus, select:focus {
+    border-color: #f5c842;
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 70px;
+    line-height: 1.5;
+  }
+
+  /* Slider */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    background: #2e2e3a;
+    border-radius: 4px;
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    background: #f5c842;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .slider-val {
+    font-size: 0.8rem;
+    color: #f5c842;
+    min-width: 36px;
+    text-align: right;
+  }
+
+  /* Color swatches */
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+  }
+
+  .swatch {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 6px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border 0.15s, transform 0.1s;
+  }
+
+  .swatch:hover { transform: scale(1.1); }
+  .swatch.active { border-color: #f5c842; }
+
+  .color-custom {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  input[type="color"] {
+    width: 36px; height: 36px;
+    border: none;
+    border-radius: 8px;
+    background: none;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  /* Font selector */
+  .font-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .font-item {
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 1px solid #2e2e3a;
+    background: #1e1e26;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .font-item:hover { border-color: #555; }
+  .font-item.active { border-color: #f5c842; background: #28280f; }
+
+  .font-preview {
+    font-size: 1.3rem;
+    flex: 1;
+  }
+
+  .font-name {
+    font-size: 0.65rem;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* Sticks toggle */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .toggle {
+    position: relative;
+    width: 44px; height: 24px;
+  }
+
+  .toggle input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: #2e2e3a;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 18px; height: 18px;
+    left: 3px; top: 3px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+
+  .toggle input:checked + .toggle-slider { background: #f5c842; }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+  /* Buttons */
+  .btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Fredoka One', sans-serif;
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: #f5c842;
+    color: #111;
+  }
+
+  .btn-primary:hover { background: #ffd85a; transform: translateY(-1px); }
+
+  .btn-secondary {
+    background: #1e1e26;
+    border: 1px solid #2e2e3a;
+    color: #ccc;
+    margin-top: 8px;
+  }
+
+  .btn-secondary:hover { border-color: #888; color: #fff; }
+
+  /* === CANVAS AREA === */
+  .canvas-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #16161e;
+    gap: 16px;
+    position: relative;
+    padding: 30px;
+  }
+
+  .canvas-bg-toggle {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    gap: 8px;
+  }
+
+  .bg-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-family: 'Fredoka One', sans-serif;
+    cursor: pointer;
+    border: 1px solid #2e2e3a;
+    background: #1e1e26;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+
+  .bg-btn.active {
+    background: #f5c842;
+    color: #111;
+    border-color: #f5c842;
+  }
+
+  #preview-wrap {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 50px 30px;
+    transition: background 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #preview-wrap.dark-bg {
+    background: #1a1a1a;
+  }
+
+  #preview-wrap.grid-bg {
+    background-image: repeating-linear-gradient(
+      0deg, transparent, transparent 19px, #ddd 19px, #ddd 20px
+    ), repeating-linear-gradient(
+      90deg, transparent, transparent 19px, #ddd 19px, #ddd 20px
+    );
+    background-color: white;
+  }
+
+  /* SVG Canvas */
+  #topper-svg {
+    display: block;
+    overflow: visible;
+  }
+
+  .canvas-info {
+    font-size: 0.7rem;
+    color: #555;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  /* Scrollbar */
+  .panel::-webkit-scrollbar { width: 4px; }
+  .panel::-webkit-scrollbar-track { background: transparent; }
+  .panel::-webkit-scrollbar-thumb { background: #2e2e3a; border-radius: 4px; }
+
+  .font-grid::-webkit-scrollbar { width: 4px; }
+  .font-grid::-webkit-scrollbar-track { background: transparent; }
+  .font-grid::-webkit-scrollbar-thumb { background: #2e2e3a; border-radius: 4px; }
+
+  .divider {
+    height: 1px;
+    background: #2e2e3a;
+  }
+
+  /* Watermark overlay on SVG */
+  #wm-text {
+    font-family: 'Fredoka One', sans-serif;
+    font-size: 13px;
+    fill: rgba(0,0,0,0.18);
+    pointer-events: none;
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Topper Studio</h1>
+    <span>Cake Topper Live Editor</span>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- PANEL -->
+  <div class="panel">
+
+    <!-- TEXT -->
+    <div>
+      <div class="section-title">✦ Texto</div>
+      <div class="field">
+        <label>Línea 1</label>
+        <input type="text" id="line1" value="Happy" placeholder="Ej: Happy / HBD / ¡Feliz">
+      </div>
+      <div class="field" style="margin-top:10px">
+        <label>Línea 2</label>
+        <input type="text" id="line2" value="Birthday" placeholder="Ej: Birthday / 30 / Cumple">
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- FONT -->
+    <div>
+      <div class="section-title">✦ Fuente</div>
+      <div class="font-grid" id="font-grid"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- SIZE -->
+    <div>
+      <div class="section-title">✦ Tamaño</div>
+      <div class="field">
+        <label>Línea 1</label>
+        <div class="slider-row">
+          <input type="range" id="size1" min="40" max="200" value="90">
+          <span class="slider-val" id="size1-val">90</span>
+        </div>
+      </div>
+      <div class="field" style="margin-top:10px">
+        <label>Línea 2</label>
+        <div class="slider-row">
+          <input type="range" id="size2" min="40" max="200" value="110">
+          <span class="slider-val" id="size2-val">110</span>
+        </div>
+      </div>
+      <div class="field" style="margin-top:10px">
+        <label>Espaciado entre líneas</label>
+        <div class="slider-row">
+          <input type="range" id="lineGap" min="-20" max="60" value="10">
+          <span class="slider-val" id="lineGap-val">10</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- COLOR -->
+    <div>
+      <div class="section-title">✦ Color</div>
+      <div class="color-grid" id="color-grid"></div>
+      <div class="color-custom">
+        <input type="color" id="custom-color" value="#000000">
+        <span style="font-size:0.75rem;color:#888">Color personalizado</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- OPTIONS -->
+    <div>
+      <div class="section-title">✦ Opciones</div>
+      <div class="toggle-row">
+        <span style="font-size:0.85rem;color:#ccc">Mostrar palitos</span>
+        <label class="toggle">
+          <input type="checkbox" id="show-sticks" checked>
+          <div class="toggle-slider"></div>
+        </label>
+      </div>
+      <div class="toggle-row" style="margin-top:12px">
+        <span style="font-size:0.85rem;color:#ccc">Solo contorno (corte)</span>
+        <label class="toggle">
+          <input type="checkbox" id="outline-mode">
+          <div class="toggle-slider"></div>
+        </label>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- EXPORT -->
+    <div>
+      <div class="section-title">✦ Exportar</div>
+      <button class="btn btn-primary" onclick="exportPNG()">⬇ Descargar PNG (con marca de agua)</button>
+      <button class="btn btn-secondary" onclick="exportSVG()">⬇ Descargar SVG (editable)</button>
+      <p style="font-size:0.65rem;color:#555;margin-top:8px;line-height:1.5;text-align:center;">
+        El PNG incluye marca de agua. El SVG es editable en Cricut Design Space o Illustrator.
+      </p>
+    </div>
+
+  </div>
+
+  <!-- CANVAS -->
+  <div class="canvas-area">
+
+    <div class="canvas-bg-toggle">
+      <button class="bg-btn active" onclick="setBg('white', this)">Blanco</button>
+      <button class="bg-btn" onclick="setBg('grid', this)">Grilla</button>
+      <button class="bg-btn" onclick="setBg('dark', this)">Oscuro</button>
+    </div>
+
+    <div id="preview-wrap">
+      <svg id="topper-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <div class="canvas-info">Vista previa en tiempo real · El topper se adapta al texto</div>
+
+  </div>
+</div>
+
+<script>
+// ========== CONFIG ==========
+const FONTS = [
+  { name: 'Great Vibes', label: 'Great Vibes' },
+  { name: 'Dancing Script', label: 'Dancing Script' },
+  { name: 'Pacifico', label: 'Pacifico' },
+  { name: 'Sacramento', label: 'Sacramento' },
+  { name: 'Pinyon Script', label: 'Pinyon Script' },
+  { name: 'Alex Brush', label: 'Alex Brush' },
+  { name: 'Allura', label: 'Allura' },
+  { name: 'Yellowtail', label: 'Yellowtail' },
+  { name: 'Italianno', label: 'Italianno' },
+  { name: 'Euphoria Script', label: 'Euphoria Script' },
+  { name: 'Mr Dafoe', label: 'Mr Dafoe' },
+  { name: 'Lobster', label: 'Lobster' },
+];
+
+const COLORS = [
+  '#000000','#1a1a2e','#2d2d2d','#4a0e0e','#6b3a2a','#8b4513',
+  '#c0392b','#e74c3c','#e67e22','#f39c12','#f5c842','#27ae60',
+  '#2980b9','#8e44ad','#c0392b','#ffffff','#f8f8f8','#d4af37',
+];
+
+let currentFont = 'Great Vibes';
+let currentColor = '#000000';
+
+// ========== BUILD FONT GRID ==========
+const fontGrid = document.getElementById('font-grid');
+FONTS.forEach(f => {
+  const item = document.createElement('div');
+  item.className = 'font-item' + (f.name === currentFont ? ' active' : '');
+  item.innerHTML = `
+    <span class="font-preview" style="font-family:'${f.name}',cursive">${f.label}</span>
+    <span class="font-name">${f.label}</span>
+  `;
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.font-item').forEach(x => x.classList.remove('active'));
+    item.classList.add('active');
+    currentFont = f.name;
+    render();
+  });
+  fontGrid.appendChild(item);
+});
+
+// ========== BUILD COLOR GRID ==========
+const colorGrid = document.getElementById('color-grid');
+COLORS.forEach(c => {
+  const sw = document.createElement('div');
+  sw.className = 'swatch' + (c === currentColor ? ' active' : '');
+  sw.style.background = c;
+  sw.style.border = c === '#ffffff' || c === '#f8f8f8' ? '2px solid #444' : '2px solid transparent';
+  sw.addEventListener('click', () => {
+    document.querySelectorAll('.swatch').forEach(x => x.classList.remove('active'));
+    sw.classList.add('active');
+    currentColor = c;
+    document.getElementById('custom-color').value = c;
+    render();
+  });
+  colorGrid.appendChild(sw);
+});
+
+document.getElementById('custom-color').addEventListener('input', e => {
+  document.querySelectorAll('.swatch').forEach(x => x.classList.remove('active'));
+  currentColor = e.target.value;
+  render();
+});
+
+// ========== SLIDER VALUES ==========
+['size1','size2','lineGap'].forEach(id => {
+  const el = document.getElementById(id);
+  const val = document.getElementById(id + '-val');
+  el.addEventListener('input', () => { val.textContent = el.value; render(); });
+});
+
+// ========== TEXT INPUTS ==========
+['line1','line2'].forEach(id => {
+  document.getElementById(id).addEventListener('input', render);
+});
+
+document.getElementById('show-sticks').addEventListener('change', render);
+document.getElementById('outline-mode').addEventListener('change', render);
+
+// ========== RENDER ==========
+function render() {
+  const line1 = document.getElementById('line1').value || ' ';
+  const line2 = document.getElementById('line2').value || ' ';
+  const size1 = +document.getElementById('size1').value;
+  const size2 = +document.getElementById('size2').value;
+  const gap = +document.getElementById('lineGap').value;
+  const showSticks = document.getElementById('show-sticks').checked;
+  const outlineMode = document.getElementById('outline-mode').checked;
+  const font = currentFont;
+  const color = currentColor;
+
+  const PAD_X = 60;
+  const PAD_Y = 30;
+  const LINE_H1 = size1 * 1.1;
+  const LINE_H2 = size2 * 1.1;
+
+  // Estimate widths via canvas measureText approximation
+  const estimatedW1 = estimateWidth(line1, size1, font);
+  const estimatedW2 = estimateWidth(line2, size2, font);
+  const maxW = Math.max(estimatedW1, estimatedW2, 200);
+
+  const svgW = maxW + PAD_X * 2;
+  const totalTextH = LINE_H1 + gap + LINE_H2;
+  const stickAreaH = showSticks ? 90 : 0;
+  const svgH = totalTextH + PAD_Y * 2 + stickAreaH;
+
+  // Y positions
+  const y1 = PAD_Y + LINE_H1 * 0.85;
+  const y2 = y1 + gap + LINE_H2 * 1.0;
+  const cx = svgW / 2;
+
+  // Stick positions
+  const stickX1 = cx - maxW * 0.22;
+  const stickX2 = cx + maxW * 0.22;
+  const stickTop = y2 + LINE_H2 * 0.15;
+  const stickBot = stickTop + stickAreaH;
+
+  const fillAttr = outlineMode
+    ? `fill="none" stroke="${color}" stroke-width="1.5"`
+    : `fill="${color}"`;
+
+  // Build stick SVG
+  let stickSVG = '';
+  if (showSticks) {
+    if (outlineMode) {
+      stickSVG = `
+        <line x1="${stickX1}" y1="${stickTop}" x2="${stickX1}" y2="${stickBot}" stroke="#b8860b" stroke-width="3" stroke-linecap="round"/>
+        <line x1="${stickX2}" y1="${stickTop}" x2="${stickX2}" y2="${stickBot}" stroke="#b8860b" stroke-width="3" stroke-linecap="round"/>
+      `;
+    } else {
+      stickSVG = `
+        <rect x="${stickX1 - 2}" y="${stickTop}" width="4" height="${stickAreaH}" rx="2" fill="#c8a050"/>
+        <rect x="${stickX2 - 2}" y="${stickTop}" width="4" height="${stickAreaH}" rx="2" fill="#c8a050"/>
+      `;
+    }
+  }
+
+  // Watermark pattern
+  const wmPattern = buildWatermark(svgW, svgH);
+
+  const svgContent = `
+<svg id="topper-svg" xmlns="http://www.w3.org/2000/svg"
+  width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">
+
+  <defs>
+    ${wmPattern.defs}
+  </defs>
+
+  ${stickSVG}
+
+  <text
+    x="${cx}" y="${y1}"
+    font-family="'${font}', cursive"
+    font-size="${size1}"
+    text-anchor="middle"
+    dominant-baseline="auto"
+    ${fillAttr}
+  >${escapeXML(line1)}</text>
+
+  <text
+    x="${cx}" y="${y2}"
+    font-family="'${font}', cursive"
+    font-size="${size2}"
+    text-anchor="middle"
+    dominant-baseline="auto"
+    ${fillAttr}
+  >${escapeXML(line2)}</text>
+
+  ${wmPattern.use}
+
+</svg>`;
+
+  document.getElementById('preview-wrap').innerHTML = svgContent;
+
+  // Resize preview wrap nicely
+  const wrap = document.getElementById('preview-wrap');
+  wrap.style.maxWidth = Math.min(svgW + 80, window.innerWidth - 380) + 'px';
+}
+
+function estimateWidth(text, size, font) {
+  // Use a hidden canvas for measurement
+  if (!window._measureCanvas) {
+    window._measureCanvas = document.createElement('canvas');
+  }
+  const ctx = _measureCanvas.getContext('2d');
+  ctx.font = `${size}px '${font}', cursive`;
+  return ctx.measureText(text).width;
+}
+
+function escapeXML(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function buildWatermark(w, h) {
+  const reps = [];
+  const step = 90;
+  for (let y = 0; y < h; y += step) {
+    for (let x = -30; x < w; x += 180) {
+      reps.push(`<text x="${x}" y="${y}" transform="rotate(-30,${x},${y})" font-family="'Fredoka One',sans-serif" font-size="11" fill="rgba(0,0,0,0.12)" pointer-events="none" user-select="none">Topper Studio</text>`);
+    }
+  }
+  return { defs: '', use: reps.join('') };
+}
+
+// ========== BG TOGGLE ==========
+function setBg(mode, btn) {
+  const wrap = document.getElementById('preview-wrap');
+  wrap.className = '';
+  if (mode === 'dark') wrap.classList.add('dark-bg');
+  if (mode === 'grid') wrap.classList.add('grid-bg');
+  document.querySelectorAll('.bg-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ========== EXPORT PNG ==========
+async function exportPNG() {
+  const svg = document.querySelector('#preview-wrap svg');
+  if (!svg) return;
+
+  const svgData = new XMLSerializer().serializeToString(svg);
+  const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(svgBlob);
+
+  const img = new Image();
+  img.onload = () => {
+    const scale = 3; // 3x resolution
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth * scale || svg.width.baseVal.value * scale;
+    canvas.height = img.naturalHeight * scale || svg.height.baseVal.value * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(scale, scale);
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0);
+
+    // Extra watermark stamp on canvas
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillStyle = 'rgba(0,0,0,0.13)';
+    ctx.textAlign = 'center';
+    const cw = canvas.width / scale;
+    const ch = canvas.height / scale;
+    ctx.save();
+    ctx.translate(cw / 2, ch - 14);
+    ctx.fillText('© Topper Studio — topperstudio.app', 0, 0);
+    ctx.restore();
+
+    canvas.toBlob(blob => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'topper-preview.png';
+      a.click();
+    }, 'image/png');
+
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
+}
+
+// ========== EXPORT SVG ==========
+function exportSVG() {
+  const svg = document.querySelector('#preview-wrap svg');
+  if (!svg) return;
+
+  // Clone and strip watermark for SVG export (clean for Cricut)
+  const clone = svg.cloneNode(true);
+  // Remove watermark text nodes
+  const wms = clone.querySelectorAll('text');
+  wms.forEach(t => {
+    if (t.getAttribute('fill') && t.getAttribute('fill').includes('rgba')) {
+      t.remove();
+    }
+  });
+
+  const serializer = new XMLSerializer();
+  let svgStr = serializer.serializeToString(clone);
+
+  // Add Google Fonts embed comment for Cricut users
+  svgStr = svgStr.replace('<svg', `<!-- Font: ${currentFont} - Embed or outline text in Illustrator/Inkscape before cutting -->\n<svg`);
+
+  const blob = new Blob([svgStr], { type: 'image/svg+xml' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'topper-cricut.svg';
+  a.click();
+}
+
+// ========== INIT ==========
+render();
+</script>
+</body>
+</html>
+topper-editor (1).html

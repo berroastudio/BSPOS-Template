@@ -72,6 +72,29 @@ export async function getActiveProducts(): Promise<Product[]> {
 }
 
 /**
+ * Obtiene el inventario actual para una variante o producto.
+ */
+export async function getInventory(variantId: string): Promise<{ quantity: number; reserved: number; available: number } | null> {
+  const { data, error } = await supabase
+    .from('inventory')
+    .select('quantity, reserved, available_stock')
+    .eq('variant_id', variantId)
+    .single() as any;
+
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    console.error('[storefront-api] getInventory:', error);
+    return null;
+  }
+
+  return {
+    quantity: data.quantity,
+    reserved: data.reserved || 0,
+    available: data.available_stock || (data.quantity - (data.reserved || 0))
+  };
+}
+
+/**
  * Obtiene un producto por ID con sus variantes.
  */
 export async function getProductById(id: string): Promise<Product | null> {
@@ -191,11 +214,11 @@ export async function upsertCustomer(
   const { data, error } = await supabase
     .from('customers')
     .upsert(
-      { email, name: name || null, phone: phone || null, tenant_id: tenantId },
+      { email, name: name || null, phone: phone || null, tenant_id: tenantId } as any,
       { onConflict: 'email' }
     )
     .select()
-    .single();
+    .single() as any;
 
   if (error) {
     console.error('[storefront-api] upsertCustomer:', error);
@@ -227,7 +250,7 @@ export async function createOrder(
     .from('orders')
     .insert({ ...orderData, tenant_id: tenantId } as any)
     .select()
-    .single();
+    .single() as any;
 
   if (orderError) {
     console.error('[storefront-api] createOrder:', orderError);
@@ -267,7 +290,7 @@ export async function getDefaultTenantId(): Promise<string | null> {
     .from('tenants')
     .select('id')
     .limit(1)
-    .single();
+    .single() as any;
 
   if (error) {
     console.error('[storefront-api] getDefaultTenantId:', error);

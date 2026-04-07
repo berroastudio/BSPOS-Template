@@ -22,10 +22,22 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
   const [addons, setAddons] = useState<string[]>([]);
   const [qty, setQty] = useState(1);
   const [compats, setCompats] = useState<ProductCompat[]>([]);
+  const [realStock, setRealStock] = useState<number | null>(null);
 
   useEffect(() => {
     getProductCompatibility(product.id).then(setCompats).catch(() => {});
   }, [product.id]);
+
+  useEffect(() => {
+    if (sv?.id) {
+       import('../lib/storefront-api').then(m => {
+         m.getInventory(sv.id).then(inv => {
+           if (inv) setRealStock(inv.available);
+           else setRealStock(sv.inventory_quantity || 0);
+         });
+       });
+    }
+  }, [sv]);
 
   const media = product.media as any;
   const imgs: string[] = media?.images || [];
@@ -46,7 +58,7 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
   const unit = getProductPrice(product, currency);
   const compareAt = getCompareAtPrice(product, currency);
   const total = (unit + addonAmt) * qty;
-  const stock = sv?.inventory_quantity ?? 99;
+  const stock = realStock ?? sv?.inventory_quantity ?? 0;
   const save = compareAt && compareAt > unit ? compareAt - unit : 0;
   const store = STORES[storeId];
 

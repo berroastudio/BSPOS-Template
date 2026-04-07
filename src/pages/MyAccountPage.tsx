@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useUser, useClerk } from '@clerk/clerk-react';
-import { ShoppingBag, User, Package, ChevronRight, Save, LogOut } from 'lucide-react';
+import { ShoppingBag, User, Package, ChevronRight, Save, LogOut, Sun, Moon, Search } from 'lucide-react';
 import { getCustomerOrders, getCustomerProfile, updateCustomerProfile, syncCustomerWithSupabase } from '../lib/customer-api';
+import { BSLoading } from '../components/BSLoading';
 import type { Order, Customer } from '../types/database';
 import { Toast } from '../components/Toast';
+import { StoreStrip } from '../components/StoreStrip';
+import { STORES, type StoreId } from '../config/stores';
 
 export function MyAccountPage() {
   const { user } = useUser();
   const { signOut } = useClerk();
   
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [storeId, setStoreId] = useState<StoreId>('usa');
   const [profile, setProfile] = useState<Customer | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,6 +29,11 @@ export function MyAccountPage() {
     shipping_address: '',
     billing_address: ''
   });
+
+  // ─── Theme Effect ──────────────────────────────────────────
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     if (user) {
@@ -59,8 +69,6 @@ export function MyAccountPage() {
   async function handleSaveProfile() {
     if (!profile) return;
     setSaving(true);
-    
-    // Preparar datos para Supabase
     const updates = {
       ...formData,
       shipping_address: formData.shipping_address,
@@ -76,176 +84,218 @@ export function MyAccountPage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
-      </div>
-    );
+    return <BSLoading fullPage label="Cargando tu cuenta de Berroa Studio..." />;
   }
 
   return (
-    <div className="account-container min-h-screen bg-[#fafafa] py-12 px-4">
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <header className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-black to-gray-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg">
+    <>
+      <StoreStrip activeStore={storeId} onStoreChange={setStoreId} />
+
+      <nav className="nav">
+        <span className="nav-logo" onClick={() => window.location.href = '/'}>
+          Berroa <em>Studio</em>
+        </span>
+        <div className="nav-links">
+          <span className="nav-link active">Mi Cuenta</span>
+          <span className="nav-link" onClick={() => window.location.href = '/'}>Tienda</span>
+        </div>
+        <div className="nav-right">
+          <button className="icon-btn" aria-label="Search">
+            <Search size={16} />
+          </button>
+          <button className="icon-btn" aria-label="Account" style={{ background: 'var(--bg2)' }}>
+            <User size={16} />
+          </button>
+          <button className="icon-btn" onClick={() => window.location.href = '/'}>
+            <ShoppingBag size={16} />
+          </button>
+          <button
+            className="icon-btn"
+            onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+            aria-label="Toggle theme"
+          >
+            {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
+          </button>
+        </div>
+      </nav>
+
+      <div className="container" style={{ padding: '3rem 2rem' }}>
+        <header style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '3rem',
+          flexWrap: 'wrap',
+          gap: '1.5rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+            <div style={{ 
+              width: '64px', 
+              height: '64px', 
+              borderRadius: '50%', 
+              background: 'var(--accent)', 
+              color: 'var(--accent-fg)',
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              fontSize: '1.5rem', 
+              fontWeight: 600,
+              fontFamily: 'var(--font-display)',
+              fontStyle: 'italic',
+              boxShadow: 'var(--shadow)'
+            }}>
               {user?.firstName?.[0] || user?.primaryEmailAddress?.emailAddress?.[0].toUpperCase()}
             </div>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Mi Cuenta</h1>
-              <p className="text-gray-500">{user?.primaryEmailAddress?.emailAddress}</p>
+              <h1 style={{ 
+                fontFamily: 'var(--font-display)', 
+                fontSize: '2rem', 
+                fontWeight: 500, 
+                fontStyle: 'italic',
+                marginBottom: '0.2rem'
+              }}>Hola, {user?.firstName || 'cliente'}</h1>
+              <p style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>{user?.primaryEmailAddress?.emailAddress}</p>
             </div>
           </div>
           <button 
             onClick={() => signOut()}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors self-start md:self-center"
+            className="btn"
+            style={{ borderColor: '#e05b4b', color: '#e05b4b' }}
           >
-            <LogOut size={16} /> Cerrar Sesión
+            <LogOut size={14} /> Salir
           </button>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Section: Profile Info */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-              <div className="flex items-center gap-2 mb-6 text-gray-900 font-semibold">
-                <User size={20} className="text-gray-400" />
-                Información de Perfil
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', 
+          gap: '2.5rem',
+          alignItems: 'start'
+        }}>
+          {/* Perfil Fiscal */}
+          <section className="card" style={{ padding: '2rem', animation: 'fadeUp 0.3s ease both' }}>
+            <h3 style={{ 
+              fontFamily: 'var(--font-display)', 
+              fontSize: '1.15rem', 
+              fontStyle: 'italic', 
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <User size={18} /> Datos de Facturación
+            </h3>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div>
+                <label className="var-label">Nombre / Razón Social</label>
+                <input 
+                  type="text" 
+                  className="promo-in"
+                  style={{ width: '100%', padding: '0.75rem' }}
+                  value={formData.razon_social}
+                  onChange={e => setFormData({...formData, razon_social: e.target.value})}
+                  placeholder="Ej. Berroa Studio SRL"
+                />
+              </div>
+              <div>
+                <label className="var-label">RNC / Cédula</label>
+                <input 
+                  type="text" 
+                  className="promo-in"
+                  style={{ width: '100%', padding: '0.75rem' }}
+                  value={formData.rnc}
+                  onChange={e => setFormData({...formData, rnc: e.target.value})}
+                  placeholder="1-31-..."
+                />
+              </div>
+              <div>
+                <label className="var-label">Teléfono de Contacto</label>
+                <input 
+                  type="text" 
+                  className="promo-in"
+                  style={{ width: '100%', padding: '0.75rem' }}
+                  value={formData.phone}
+                  onChange={e => setFormData({...formData, phone: e.target.value})}
+                />
+              </div>
+              <div>
+                <label className="var-label">Dirección Fiscal</label>
+                <textarea 
+                  className="promo-in"
+                  style={{ width: '100%', padding: '0.75rem', minHeight: '80px', resize: 'none' }}
+                  value={formData.billing_address}
+                  onChange={e => setFormData({...formData, billing_address: e.target.value})}
+                />
               </div>
               
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">Nombre Completo</label>
-                  <input 
-                    type="text" 
-                    value={formData.name}
-                    onChange={e => setFormData({...formData, name: e.target.value})}
-                    className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-black outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">Teléfono</label>
-                  <input 
-                    type="text" 
-                    value={formData.phone}
-                    onChange={e => setFormData({...formData, phone: e.target.value})}
-                    className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-black outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">RNC / Cédula</label>
-                  <input 
-                    type="text" 
-                    value={formData.rnc}
-                    onChange={e => setFormData({...formData, rnc: e.target.value})}
-                    className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-black outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">Razón Social</label>
-                  <input 
-                    type="text" 
-                    value={formData.razon_social}
-                    onChange={e => setFormData({...formData, razon_social: e.target.value})}
-                    className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-black outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">Dirección de Envío</label>
-                  <textarea 
-                    value={formData.shipping_address}
-                    onChange={e => setFormData({...formData, shipping_address: e.target.value})}
-                    rows={2}
-                    className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-black outline-none transition-all resize-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">Dirección de Facturación</label>
-                  <textarea 
-                    value={formData.billing_address}
-                    onChange={e => setFormData({...formData, billing_address: e.target.value})}
-                    rows={2}
-                    className="w-full px-4 py-3 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-black outline-none transition-all resize-none"
-                  />
-                </div>
-                
-                <button 
-                  onClick={handleSaveProfile}
-                  disabled={saving}
-                  className="w-full mt-4 flex items-center justify-center gap-2 py-4 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-all disabled:bg-gray-400"
-                >
-                  {saving ? 'Guardando...' : <><Save size={18} /> Guardar Cambios</>}
-                </button>
-              </div>
+              <button 
+                onClick={handleSaveProfile}
+                disabled={saving}
+                className="btn btn-solid btn-full"
+                style={{ marginTop: '0.5rem' }}
+              >
+                {saving ? 'Guardando...' : <><Save size={16} /> Actualizar Perfil</>}
+              </button>
             </div>
-          </div>
+          </section>
 
-          {/* Section: Orders History */}
-          <div className="lg:col-span-2">
-            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 min-h-[500px]">
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-2 text-gray-900 font-semibold">
-                  <Package size={20} className="text-gray-400" />
-                  Historial de Pedidos
-                </div>
-                <span className="text-xs font-bold bg-gray-100 px-3 py-1 rounded-full text-gray-500">
-                  {orders.length} pedidos
-                </span>
+          {/* Mis Compras */}
+          <section className="card" style={{ padding: '2rem', animation: 'fadeUp 0.3s ease 0.1s both' }}>
+            <h3 style={{ 
+              fontFamily: 'var(--font-display)', 
+              fontSize: '1.15rem', 
+              fontStyle: 'italic', 
+              marginBottom: '1.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <Package size={18} /> Mis Compras
+            </h3>
+
+            {orders.length === 0 ? (
+              <div className="empty-cart">
+                <ShoppingBag size={32} style={{ margin: '0 auto 1rem', display: 'block' }} />
+                <p style={{ fontSize: '0.85rem' }}>Aún no has realizado ninguna compra.</p>
+                <a href="/" style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.75rem', textDecoration: 'underline', marginTop: '1rem', display: 'block' }}>Explorar tienda</a>
               </div>
-
-              {orders.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                    <ShoppingBag size={24} className="text-gray-300" />
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900">Aún no tienes pedidos</h3>
-                  <p className="text-gray-500 max-w-xs mt-2">Explora nuestra tienda y haz tu primera compra para verla aquí.</p>
-                  <a href="/" className="mt-8 text-black font-bold underline underline-offset-4">Ir a la tienda</a>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {orders.map((order) => (
-                    <div key={order.id} className="group p-5 bg-gray-50 rounded-2xl hover:bg-white hover:shadow-md border border-transparent hover:border-gray-100 transition-all cursor-pointer">
-                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-black font-bold">
-                            #{order.id.split('-')[0].toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="font-bold text-gray-900">{new Date(order.created_at).toLocaleDateString()}</div>
-                            <div className="text-sm text-gray-500">
-                              {order.currency} {order.total?.toLocaleString()}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center justify-between md:justify-end gap-6">
-                          <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider
-                            ${order.status === 'paid' || order.status === 'delivered' ? 'bg-green-100 text-green-700' : 
-                              order.status === 'cancelled' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}
-                          >
-                            {order.status}
-                          </span>
-                          <ChevronRight size={20} className="text-gray-300 group-hover:text-black transition-colors" />
-                        </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {orders.map((order) => (
+                  <div 
+                    key={order.id} 
+                    className="ci" 
+                    style={{ 
+                      margin: 0, 
+                      padding: '1rem', 
+                      background: 'var(--bg2)', 
+                      borderRadius: 'var(--r-sm)',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <div className="ci-info">
+                      <div className="ci-name" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Pedido #{order.id.split('-')[0].toUpperCase()}</span>
+                        <span style={{ color: 'var(--green)', fontSize: '0.7rem' }}>
+                          {order.currency} {order.total?.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="ci-meta">
+                        {new Date(order.created_at).toLocaleDateString()} • <span style={{ textTransform: 'uppercase' }}>{order.status}</span>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+                    <ChevronRight size={16} style={{ alignSelf: 'center', color: 'var(--muted)' }} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
       </div>
       
       <Toast message={toast} />
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        .account-container {
-          font-family: 'Outfit', sans-serif;
-        }
-      `}} />
-    </div>
+    </>
   );
 }

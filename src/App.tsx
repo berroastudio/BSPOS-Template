@@ -5,6 +5,7 @@ import { CheckoutSuccess } from './pages/CheckoutSuccess';
 import { CheckoutCancelled } from './pages/CheckoutCancelled';
 import { MyAccountPage } from './pages/MyAccountPage';
 import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 
 const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -68,7 +69,17 @@ export default function App() {
   return (
     <ClerkProvider publishableKey={CLERK_KEY}>
       <BrowserRouter>
-        <SubdomainRouter />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={window.location.hostname + window.location.pathname}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+          >
+            <SubdomainRouter />
+          </motion.div>
+        </AnimatePresence>
       </BrowserRouter>
     </ClerkProvider>
   );

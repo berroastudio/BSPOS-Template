@@ -5,6 +5,7 @@ import { ProductCard, type CartItem } from '../components/ProductCard';
 import { ProductDetail } from '../components/ProductDetail';
 import { CheckoutPanel } from '../components/CheckoutPanel';
 import { Toast } from '../components/Toast';
+import { BSLoading } from '../components/BSLoading';
 import { getActiveProducts, getCategories, type Category } from '../lib/storefront-api';
 import { STORES, type StoreId, type Currency } from '../config/stores';
 import type { Product, Variant } from '../types/database';
@@ -197,7 +198,11 @@ export function StorefrontPage({ defaultView }: StorefrontPageProps) {
             </div>
 
             {/* Product grid */}
-            {loading && <SkeletonGrid />}
+            {loading && (
+              <div style={{ padding: "100px 0" }}>
+                <BSLoading label="Cargando catálogo premium..." />
+              </div>
+            )}
 
             {!loading && error && (
               <div className="error-state">

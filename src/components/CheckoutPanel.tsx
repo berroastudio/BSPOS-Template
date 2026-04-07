@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { X, ShoppingBag, Shield, CreditCard, Check, Minus, Plus, AlertCircle, Loader } from 'lucide-react';
+import { X, ShoppingBag, Shield, CreditCard, Check, Minus, Plus, AlertCircle } from 'lucide-react';
+import { BSLoading } from './BSLoading';
+import { useUser } from '@clerk/clerk-react';
 import { STORES, ADDON_DEFS, fmt, getVarKey, type StoreId, type Currency } from '../config/stores';
 import { getProductPrice } from '../lib/storefront-api';
 import { redirectToCheckout, isStripeConfigured } from '../lib/stripe-checkout';
@@ -20,10 +22,27 @@ type PromoState =
   | { status: 'err'; message: string };
 
 export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: CheckoutPanelProps) {
+  const { user } = useUser();
   const [promo, setPromo] = useState('');
   const [promoState, setPromoState] = useState<PromoState>({ status: 'idle' });
   const [checkingOut, setCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [inventoryMap, setInventoryMap] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const fetchInv = async () => {
+      const { getInventory } = await import('../lib/storefront-api');
+      const map: Record<string, number> = {};
+      for (const item of cart) {
+        if (item.variant?.id) {
+          const inv = await getInventory(item.variant.id);
+          if (inv) map[item.variant.id] = inv.available;
+        }
+      }
+      setInventoryMap(map);
+    };
+    fetchInv();
+  }, []); // eslint-disable-line
 
   const subtotal = cart.reduce((s, item) => {
     const base = getProductPrice(item.product, currency) * item.qty;
@@ -53,18 +72,28 @@ export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: Che
     if (!promo.trim()) return;
     setPromoState({ status: 'loading' });
     try {
-      const res = await fetch('/api/validate-promo', {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl) throw new Error('Supabase URL not configured');
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/validate-promo`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: promo.trim(), subtotal, currency }),
+        headers: { 
+          'Content-Type': 'application/json',
+          'apikey': supabaseAnon,
+          'Authorization': `Bearer ${supabaseAnon}`
+        },
+        body: JSON.stringify({ code: promo.trim(), subtotal, currency, storeId }),
       });
       const data = await res.json();
       if (data.valid) {
         setPromoState({ status: 'ok', message: data.message, discountAmount: data.discountAmount, promoId: data.promoId });
       } else {
-        setPromoState({ status: 'err', message: data.message });
+        setPromoState({ status: 'err', message: data.message || 'Código no válido' });
       }
-    } catch {
+    } catch (err: any) {
+      console.error('Promo error:', err);
       setPromoState({ status: 'err', message: 'Error al validar el código' });
     }
   };
@@ -124,6 +153,14 @@ export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: Che
                           <button className="ci-rm" onClick={() => rm(idx)}><X size={12} /></button>
                         </div>
                       </div>
+                      {item.variant?.id && inventoryMap[item.variant.id] !== undefined && item.qty > inventoryMap[item.variant.id] && (
+                        <div style={{ marginTop: '8px', padding: '10px', background: 'rgba(235, 114, 100, 0.1)', borderRadius: '6px', fontSize: '0.72rem', color: '#e05b4b', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                          <AlertCircle size={14} style={{ flexShrink: 0, marginTop: '2px' }} />
+                          <div>
+                            <strong>Compromiso de Disponibilidad:</strong> Tenemos {inventoryMap[item.variant.id]} unidades listas. Notificamos que cobraremos las unidades en inventario ahora y las demás le comunicaremos antes de enviar su orden.
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -146,6 +183,11 @@ export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: Che
                   {promoState.status === 'loading' ? '...' : 'Aplicar'}
                 </button>
               </div>
+              {promoState.status === 'loading' && (
+                <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'center' }}>
+                  <BSLoading label="Validando código..." />
+                </div>
+              )}
               {promoState.status === 'ok' && (
                 <div className="promo-ok"><Check size={11} /> {promoState.message}</div>
               )}
@@ -187,6 +229,7 @@ export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: Che
               className="btn btn-solid btn-full"
               disabled={checkingOut}
               onClick={async () => {
+                if (checkingOut) return;
                 setCheckingOut(true);
                 setCheckoutError(null);
                 try {
@@ -214,6 +257,8 @@ export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: Che
                     metadata: {
                       store: storeId,
                       promo: promoState.status === 'ok' ? promoState.promoId : '',
+                      customer_clerk_id: user?.id || '',
+                      tenant_id: STORES[storeId].tenant_id || '',
                     },
                   });
                 } catch (err: any) {
@@ -223,7 +268,7 @@ export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: Che
               }}
             >
               {checkingOut ? (
-                <><Loader size={13} className="spin" /> Procesando...</>
+                <><BSLoading size={13} /> Procesando...</>
               ) : (
                 <><CreditCard size={13} /> Checkout · {fmt(total, currency)}</>
               )}
@@ -235,6 +280,9 @@ export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: Che
           </div>
         )}
       </div>
+      {checkingOut && (
+        <BSLoading fullPage label="Procesando tu orden en Berroa Studio..." />
+      )}
     </div>
   );
 }

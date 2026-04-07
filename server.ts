@@ -50,7 +50,7 @@ async function startServer() {
       const { data: promo, error } = await supabase
         .from('promotions')
         .select('*')
-        .eq('code', code.toUpperCase())
+        .ilike('code', code)
         .eq('status', 'active')
         .single();
 
@@ -67,22 +67,26 @@ async function startServer() {
         return res.json({ valid: false, message: 'Esta promoción ha expirado' });
       }
 
-      // Validar compra mínima según moneda
+      // Validar compra mínima según moneda (fallback a min_purchase genérico si no existe el campo específico)
       const minKey = `min_purchase_${currency.toLowerCase()}`;
-      const minPurchase = promo[minKey] || 0;
+      const minPurchase = Number(promo[minKey] ?? promo.min_purchase ?? 0);
+      
+      console.log(`[Promo] Min purchase: ${minPurchase}, Applied to subtotal: ${subtotal}`);
+
       if (subtotal < minPurchase) {
         return res.json({ 
           valid: false, 
-          message: `Compra mínima requerida: ${currency} ${minPurchase}` 
+          message: `Compra mínima requerida: ${currency} ${minPurchase.toFixed(2)}` 
         });
       }
 
-      // Calcular descuento
+      // Calcular descuento (ahora con parseFloat para seguridad)
+      const pValue = parseFloat(promo.value);
       let discountAmount = 0;
       if (promo.type === 'percentage') {
-        discountAmount = (subtotal * promo.value) / 100;
+        discountAmount = (subtotal * pValue) / 100;
       } else if (promo.type === 'fixed_amount') {
-        discountAmount = promo.value;
+        discountAmount = pValue;
       }
 
       res.json({
