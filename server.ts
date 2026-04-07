@@ -134,12 +134,17 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`\n🚀 Storefront running on http://localhost:${PORT}`);
-    console.log(`📦 Serving files from ${process.cwd()}\n`);
-  });
+  // Solo iniciar el listener si no estamos en Vercel (que usa el export)
+  if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`\n🚀 Storefront running on http://localhost:${PORT}`);
+      console.log(`📦 Serving files from ${process.cwd()}\n`);
+    });
+  }
 }
 
 startServer().catch(err => {
   console.error("Failed to start server:", err);
 });
+
+export default startServer; // Exportar para Vercel
