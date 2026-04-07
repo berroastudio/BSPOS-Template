@@ -128,8 +128,8 @@ export function StorefrontPage({ defaultView }: StorefrontPageProps) {
 
       {/* Navigation */}
       <nav className="nav">
-        <span className="nav-logo" onClick={() => { setView('grid'); setFilter('All'); }}>
-          Berroa <em>Studio</em>
+        <span className="nav-logo" onClick={() => { setView('grid'); setFilter('All'); }} style={{ cursor: "pointer", display: "flex", alignItems: "center" }}>
+          <img src="/logo-header.png" alt="Berroa Studio" style={{ height: 28, objectFit: "contain" }} />
         </span>
         <div className="nav-links">
           {dbCategories.slice(0, 5).map(cat => (

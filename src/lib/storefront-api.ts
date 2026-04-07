@@ -77,18 +77,22 @@ export async function getActiveProducts(): Promise<Product[]> {
  */
 export async function getInventory(variantId: string): Promise<{ quantity: number; reserved: number; available: number } | null> {
   try {
-    // Intentar desde tabla inventory primero
-    const { data: invData, error: invError } = await supabase
+    // Intentar desde tabla inventory primero (sumar todas las ubicaciones/tiendas)
+    const { data: invRows, error: invError } = await supabase
       .from('inventory')
-      .select('quantity, reserved, available_stock')
-      .eq('variant_id', variantId)
-      .single() as any;
+      .select('quantity, reserved')
+      .eq('variant_id', variantId);
 
-    if (invData && !invError) {
+    if (invRows && invRows.length > 0 && !invError) {
+      const totals = invRows.reduce((acc, row) => ({
+        quantity: acc.quantity + (row.quantity || 0),
+        reserved: acc.reserved + (row.reserved || 0),
+      }), { quantity: 0, reserved: 0 });
+
       return {
-        quantity: invData.quantity,
-        reserved: invData.reserved || 0,
-        available: invData.available_stock || (invData.quantity - (invData.reserved || 0))
+        quantity: totals.quantity,
+        reserved: totals.reserved,
+        available: Math.max(0, totals.quantity - totals.reserved)
       };
     }
 
