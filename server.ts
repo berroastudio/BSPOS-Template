@@ -176,6 +176,17 @@ async function startServer() {
         });
       }
 
+      // DISPARADOR DE NOTIFICACIÓN: Crear alerta para administradores
+      const rdTenantId = '49dbf962-1e06-4af8-a2be-39d4c897c87e'; // Tenant principal de Dominicana por defecto
+      await supabase.from('notifications').insert({
+        title: 'Nuevo Mensaje Web',
+        message: `Mensaje de ${name}: ${subject}`,
+        type: 'info',
+        is_read: false,
+        tenant_id: rdTenantId,
+        created_at: new Date().toISOString()
+      });
+
       // Aquí puedes agregar envío de email usando un servicio como SendGrid, Resend, etc.
       // Por ahora solo guardamos en la base de datos
       console.log(`[Contact] Nuevo mensaje de ${name} (${email}): ${subject}`);
