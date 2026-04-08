@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Mail, Phone, MapPin, Send } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, ShieldCheck, Lock, Globe, MessageSquare } from 'lucide-react';
 import { motion } from 'motion/react';
+import { BerroaQR } from '../components/BerroaQR';
 
 export function ContactPage() {
   const [formData, setFormData] = useState({
@@ -21,7 +22,6 @@ export function ContactPage() {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Extraer el token inyectado por Turnstile
     const formElement = e.target as HTMLFormElement;
     const formDataObj = new FormData(formElement);
     const turnstileToken = formDataObj.get('cf-turnstile-response');
@@ -54,198 +54,153 @@ export function ContactPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
           className="contact-header"
         >
-          <h1>Ponte en Contacto</h1>
-          <p>¿Tienes preguntas? Nos encantaría escucharte. Envíanos un mensaje y te responderemos lo antes posible.</p>
+          <div className="bo-badge blue mb-2">Soporte Global</div>
+          <h1>Canales de Atención</h1>
+          <p>Selecciona el canal más conveniente para tu región o necesidad técnica.</p>
         </motion.div>
 
         <div className="contact-content">
-          {/* Info Cards */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="contact-info"
-          >
-            {/* Teléfono */}
-            <div className="info-card">
-              <div className="info-icon">
-                <Phone size={24} />
-              </div>
-              <h3>Teléfono</h3>
-              <p>
-                <a href="tel:+17325233816">+1 (732) 523-3816</a>
-              </p>
-              <em>Lun-Vie: 9AM-6PM EST</em>
-            </div>
+          {/* Info Side */}
+          <div className="contact-info">
+            
+            {/* REGION: RD */}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="region-group">
+               <div className="region-label"><Globe size={14}/> República Dominicana</div>
+               <div className="info-grid">
+                  <div className="info-card">
+                     <h3>Ventas y Órdenes</h3>
+                     <a href="mailto:ventas@berroastudio.com">ventas@berroastudio.com</a>
+                  </div>
+                  <div className="info-card">
+                     <h3>Soporte Técnico</h3>
+                     <a href="mailto:soporte@berroastudio.com">soporte@berroastudio.com</a>
+                  </div>
+               </div>
+            </motion.div>
 
-            {/* Emails */}
-            <div className="info-card">
-              <div className="info-icon">
-                <Mail size={24} />
-              </div>
-              <h3>Ventas y Órdenes</h3>
-              <p>
-                <a href="mailto:sales@berroastudio.com">sales@berroastudio.com</a><br />
-                <a href="mailto:ventas@berroastudio.com">ventas@berroastudio.com</a>
-              </p>
-            </div>
+            {/* REGION: USA */}
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="region-group">
+               <div className="region-label"><Globe size={14}/> United States</div>
+               <div className="info-grid">
+                  <div className="info-card">
+                     <h3>Sales & General Inquiries</h3>
+                     <a href="mailto:sales@berroastudio.com">sales@berroastudio.com</a>
+                  </div>
+                  <div className="info-card">
+                     <h3>Custom Pieces & Quotes</h3>
+                     <a href="mailto:custom@berroastudio.com">custom@berroastudio.com</a>
+                  </div>
+               </div>
+            </motion.div>
 
-            <div className="info-card">
-              <div className="info-icon">
-                <Mail size={24} />
-              </div>
-              <h3>Soporte Técnico</h3>
-              <p>
-                <a href="mailto:support@berroastudio.com">support@berroastudio.com</a><br />
-                <a href="mailto:soporte@berroastudio.com">soporte@berroastudio.com</a>
-              </p>
-            </div>
+            {/* Interactive Channels */}
+            <div className="region-label mt-4"><MessageSquare size={14}/> Canales Interactivos</div>
+            <div className="interactive-channels">
+               {/* WhatsApp */}
+               <div className="info-card social-card whatsapp">
+                  <div className="info-icon">
+                     <Phone size={24} />
+                  </div>
+                  <h3>WhatsApp Business</h3>
+                  <a href="https://wa.me/17325233816" target="_blank" rel="noopener noreferrer" className="action-link">Chatear ahora</a>
+                  <div className="qr-box">
+                    <BerroaQR value="https://wa.me/17325233816" label="Escanear WhatsApp" size={80} />
+                  </div>
+               </div>
 
-            <div className="info-card">
-              <div className="info-icon">
-                <Mail size={24} />
-              </div>
-              <h3>Piezas Custom & Cotizaciones</h3>
-              <p>
-                <a href="mailto:custom@berroastudio.com">custom@berroastudio.com</a>
-              </p>
-              <em>Diseños personalizados y piezas únicas</em>
+               {/* Telegram */}
+               <div className="info-card social-card telegram">
+                  <div className="info-icon">
+                     <Send size={24} />
+                  </div>
+                  <h3>Telegram Bot</h3>
+                  <a href="https://t.me/Berroastudio_bot" target="_blank" rel="noopener noreferrer" className="action-link">@Berroastudio_bot</a>
+                  <div className="qr-box">
+                    <BerroaQR value="https://t.me/Berroastudio_bot" label="Escanear Bot" size={80} />
+                  </div>
+               </div>
             </div>
+          </div>
 
-            {/* Social / Chat */}
-            <div className="info-card social-card highlight">
-              <div className="info-icon telegram">
-                <Send size={24} />
-              </div>
-              <h3>Telegram Bot</h3>
-              <p>
-                <a href="https://t.me/Berroastudio_bot" target="_blank" rel="noopener noreferrer">@Berroastudio_bot</a>
-              </p>
-              <div className="qr-container">
-                <img src="/telegram-qr.jpg" alt="Telegram QR" className="qr-image" />
-              </div>
-              <em>Chatea con nuestro asistente inteligente</em>
-            </div>
-
-            <div className="info-card social-card">
-              <div className="info-icon whatsapp">
-                <MapPin size={24} /> {/* Placeholder for WhatsApp icon if MessageCircle not imported */}
-              </div>
-              <h3>WhatsApp Business</h3>
-              <p>
-                <a href="https://wa.me/17325233816" target="_blank" rel="noopener noreferrer">Chat via WhatsApp</a>
-              </p>
-              <em>Atención rápida y personalizada</em>
-            </div>
-          </motion.div>
-
-          {/* Form */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="contact-form-wrapper"
-          >
+          {/* Form Side */}
+          <div className="contact-form-wrapper">
+             <div className="card-header">
+                <h3>Envíanos un mensaje</h3>
+                <p>Te responderemos en menos de 24 horas laborables.</p>
+             </div>
             <form onSubmit={handleSubmit} className="contact-form">
-              <div className="form-group">
-                <label htmlFor="name">Nombre Completo</label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="Juan Pérez"
-                  required
-                  className="form-input"
-                />
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>Nombre</label>
+                  <input type="text" name="name" value={formData.name} onChange={handleChange} required className="form-input" />
+                </div>
+                <div className="form-group">
+                  <label>Email</label>
+                  <input type="email" name="email" value={formData.email} onChange={handleChange} required className="form-input" />
+                </div>
               </div>
 
               <div className="form-group">
-                <label htmlFor="email">Email</label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="tu@email.com"
-                  required
-                  className="form-input"
-                />
+                <label>Asunto</label>
+                <input type="text" name="subject" value={formData.subject} onChange={handleChange} required className="form-input" />
               </div>
 
               <div className="form-group">
-                <label htmlFor="subject">Asunto</label>
-                <input
-                  type="text"
-                  id="subject"
-                  name="subject"
-                  value={formData.subject}
-                  onChange={handleChange}
-                  placeholder="¿Cómo podemos ayudarte?"
-                  required
-                  className="form-input"
-                />
+                <label>Mensaje</label>
+                <textarea name="message" value={formData.message} onChange={handleChange} required rows={4} className="form-input" />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="message">Mensaje</label>
-                <textarea
-                  id="message"
-                  name="message"
-                  value={formData.message}
-                  onChange={handleChange}
-                  placeholder="Cuéntanos más sobre tu pregunta o comentario..."
-                  required
-                  rows={5}
-                  className="form-input"
-                />
+              {/* Security Footer in Form */}
+              <div className="security-badges-container">
+                 <div className="security-badge">
+                    <ShieldCheck size={18} />
+                    <span>Protegido por Cloudflare Turnstile</span>
+                 </div>
+                 <div className="security-badge">
+                    <Lock size={16} />
+                    <span>Transacción Segura via Stripe</span>
+                 </div>
               </div>
 
-              {/* Cloudflare Turnstile Invisible Widget */}
-              <div 
-                className="cf-turnstile" 
-                data-sitekey="0x4AAAAAAC15jMWuWb8r3Bcg"
-                data-action="contact_form"
-                style={{ marginBottom: '1rem' }}
-              ></div>
+              <div className="cf-turnstile" data-sitekey="0x4AAAAAAC15jMWuWb8r3Bcg" data-action="contact_form"></div>
 
               {submitStatus === 'success' && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="alert alert-success"
-                >
-                  ✅ Mensaje enviado exitosamente. Nos pondremos en contacto pronto.
-                </motion.div>
+                <div className="alert alert-success">✅ Mensaje enviado exitosamente.</div>
               )}
 
-              {submitStatus === 'error' && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="alert alert-error"
-                >
-                  ❌ Hubo un error al enviar el mensaje. Por favor intenta de nuevo.
-                </motion.div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="btn btn-submit"
-              >
-                <Send size={16} />
-                {isSubmitting ? 'Enviando...' : 'Enviar Mensaje'}
+              <button type="submit" disabled={isSubmitting} className="btn-submit">
+                {isSubmitting ? 'Procesando...' : 'Enviar Consulta'}
               </button>
             </form>
-          </motion.div>
+          </div>
         </div>
       </div>
+
+      <style>{`
+        .region-group { margin-bottom: 2rem; }
+        .region-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 1rem; display: flex; alignItems: center; gap: 8px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .info-card { padding: 1.25rem; background: var(--bg2); border-radius: 12px; border: 1px solid var(--border); }
+        .info-card h3 { font-size: 0.8rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text); }
+        .info-card a { font-size: 0.85rem; color: var(--blue); text-decoration: none; word-break: break-all; }
+        
+        .interactive-channels { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+        .social-card { text-align: center; position: relative; overflow: hidden; }
+        .social-card .info-icon { margin: 0 auto 1rem; width: 48px; height: 48px; background: var(--bg-accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .action-link { display: inline-block; margin-bottom: 1.5rem; font-weight: 600; font-size: 0.8rem !important; }
+        .qr-box { margin-top: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+
+        .security-badges-container { display: flex; gap: 1rem; margin: 1.5rem 0; padding: 1rem; background: var(--bg2); border-radius: 8px; border: 1px dashed var(--border); }
+        .security-badge { display: flex; align-items: center; gap: 8px; font-size: 0.65rem; color: var(--muted); font-weight: 600; }
+        .security-badge svg { color: var(--blue); }
+
+        @media (max-width: 768px) {
+           .info-grid, .interactive-channels { grid-template-columns: 1fr; }
+           .contact-content { grid-template-columns: 1fr; }
+        }
+      `}</style>
     </div>
   );
 }
