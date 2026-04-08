@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import {
   ChevronLeft, ShoppingBag, Shield, Tag, Star,
   Package, Leaf, Droplets, Recycle, Plus, Minus, Gift, Car, Bike,
+  Heart, Share2, MessageCircle, Send, Copy, Instagram, Facebook, Mail, Check
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { VariantSelector, AddonBadges } from './VariantSelector';
 import { STORES, ADDON_DEFS, fmt, type StoreId, type Currency } from '../config/stores';
 import { getProductPrice, getCompareAtPrice, getProductCompatibility, type ProductCompat } from '../lib/storefront-api';
@@ -18,9 +20,9 @@ interface ProductDetailProps {
 }
 
 const TOPPER_SIZE_PRICES: Record<string, Record<Currency, number>> = {
-  'Pequeño': { USD: 15, DOP: 900 },
-  'Mediano': { USD: 22, DOP: 1300 },
-  'Grande': { USD: 28, DOP: 1650 },
+  'Pequeño': { USD: 15, DOP: 900, EUR: 14 },
+  'Mediano': { USD: 22, DOP: 1300, EUR: 20 },
+  'Grande': { USD: 28, DOP: 1650, EUR: 26 },
 };
 
 export function ProductDetail({ product, storeId, currency, onBack, onAddToCart }: ProductDetailProps) {
@@ -31,12 +33,104 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
   const [compats, setCompats] = useState<ProductCompat[]>([]);
   const [realStock, setRealStock] = useState<number | null>(null);
   const [topperState, setTopperState] = useState<TopperState | null>(null);
+  const [isFav, setIsFav] = useState(() => {
+    const saved = localStorage.getItem(`fav-${product.id}`);
+    return saved === 'true';
+  });
+  const [showShare, setShowShare] = useState(false);
+  const [skuCopied, setSkuCopied] = useState(false);
+
+  // Toggle favorite
+  useEffect(() => {
+    localStorage.setItem(`fav-${product.id}`, String(isFav));
+  }, [isFav, product.id]);
+
+  const copySku = () => {
+    navigator.clipboard.writeText(product.sku);
+    setSkuCopied(true);
+    setTimeout(() => setSkuCopied(false), 2000);
+  };
+
+  const getContactUrl = (type: 'wa' | 'tg', isQuote = false) => {
+    const phone = "18293410714"; // Berroa Studio official
+    const msg = isQuote 
+      ? `¡Hola! Me gustaría una cotización personalizada para el producto: ${product.name} (SKU: ${product.sku}). Link: ${window.location.href}`
+      : `¡Hola! Me gustaría más información sobre: ${product.name}. Link: ${window.location.href}`;
+    
+    if (type === 'wa') return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    return `https://t.me/+${phone}?text=${encodeURIComponent(msg)}`;
+  };
 
   const isTopper = product.category?.toLowerCase() === 'toppers' || product.category?.toLowerCase() === 'topper';
 
   useEffect(() => {
     getProductCompatibility(product.id).then(setCompats).catch(() => {});
-  }, [product.id]);
+    
+    // SEO: Dynamic Title
+    const prevTitle = document.title;
+    document.title = `${product.name} | Berroa Studio`;
+    
+    // SEO: Inject Schema.org (JSON-LD)
+    const scriptId = `product-schema-${product.id}`;
+    if (!document.getElementById(scriptId)) {
+      const script = document.createElement('script');
+      script.id = scriptId;
+      script.type = 'application/ld+json';
+      
+      const price = getProductPrice(product, currency);
+      const images = (product.media as any)?.images || [];
+      
+      const productSchema = {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": product.name,
+        "image": images,
+        "description": product.description || `Comprar ${product.name} en Berroa Studio.`,
+        "sku": product.sku,
+        "offers": {
+          "@type": "Offer",
+          "url": window.location.href,
+          "priceCurrency": currency,
+          "price": price,
+          "availability": (realStock ?? sv?.inventory_quantity ?? 0) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+        }
+      };
+
+      const breadcrumbSchema = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Inicio",
+            "item": window.location.origin
+          },
+          {
+            "@type": "ListItem",
+            "position": 2,
+            "name": product.category || "Productos",
+            "item": `${window.location.origin}/#category-${product.category}`
+          },
+          {
+            "@type": "ListItem",
+            "position": 3,
+            "name": product.name,
+            "item": window.location.href
+          }
+        ]
+      };
+
+      script.text = JSON.stringify([productSchema, breadcrumbSchema]);
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      document.title = prevTitle;
+      const el = document.getElementById(scriptId);
+      if (el) el.remove();
+    };
+  }, [product, currency, realStock, sv]);
 
   useEffect(() => {
     if (sv?.id) {
@@ -123,8 +217,77 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
         {/* Info & Sidebar */}
         <div className={isTopper ? "topper-sidebar" : ""}>
           <div className="info-title-row">
-            <h1 className="info-title">{product.name}</h1>
-            <div className="tags">
+            <div>
+              <h1 className="info-title">{product.name}</h1>
+              <div className="sku-copy-row">
+                <span>SKU: {product.sku}</span>
+                <button className="sku-copy-btn" onClick={copySku} title="Click para copiar SKU">
+                  {skuCopied ? <Check size={12} strokeWidth={3} /> : <Copy size={12} />}
+                </button>
+              </div>
+            </div>
+            
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              {/* Share Menu */}
+              <div style={{ position: 'relative' }}>
+                <button className="share-expand-btn" onClick={() => setShowShare(!showShare)}>
+                  <Share2 size={16} />
+                </button>
+                <AnimatePresence>
+                  {showShare && (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                      style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: '50px',
+                        background: 'var(--card)',
+                        border: '1px solid var(--border)',
+                        padding: '0.5rem',
+                        borderRadius: '12px',
+                        boxShadow: 'var(--shadow-lg)',
+                        display: 'flex',
+                        gap: '0.5rem',
+                        zIndex: 100
+                      }}
+                    >
+                      {[
+                        { Icon: Instagram, url: `https://instagram.com/berroastudio`, color: '#E4405F' },
+                        { Icon: MessageCircle, url: getContactUrl('wa'), color: '#25D366' },
+                        { Icon: Facebook, url: `https://facebook.com/berroastudio`, color: '#1877F2' },
+                        { Icon: Mail, url: `mailto:?subject=${product.name}&body=${window.location.href}`, color: 'var(--muted)' },
+                      ].map((item, i) => (
+                        <a key={i} href={item.url} target="_blank" rel="noreferrer" style={{ color: item.color }}>
+                          <item.Icon size={18} />
+                        </a>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Heart Fav */}
+              <div>
+                <input 
+                  type="checkbox" 
+                  id="fav-toggle" 
+                  className="fav-btn-input" 
+                  checked={isFav} 
+                  onChange={(e) => setIsFav(e.target.checked)} 
+                />
+                <label htmlFor="fav-toggle" className="fav-btn-label">
+                  <Heart size={16} />
+                  <div className="action">
+                    <span className="option-1">Favorito</span>
+                    <span className="option-2">¡Añadido!</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="tags" style={{ width: '100%' }}>
               {(product.tags || []).map(t => (
                 <span key={t} className="tag">{t}</span>
               ))}
@@ -287,6 +450,15 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
             color: 'var(--muted)',
           }}>
             <Shield size={10} /> Secure checkout · {store.description}
+          </div>
+
+          <div className="contact-row">
+            <a href={getContactUrl('wa', true)} target="_blank" rel="noreferrer" className="contact-btn wa">
+              <MessageCircle size={14} /> Pide tu Cotización
+            </a>
+            <a href={getContactUrl('tg')} target="_blank" rel="noreferrer" className="contact-btn tg">
+              <Send size={14} /> Info en Telegram
+            </a>
           </div>
         </div>
       </div>

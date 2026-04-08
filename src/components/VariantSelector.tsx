@@ -48,21 +48,21 @@ export function VariantSelector({ product, onVariantChange }: VariantSelectorPro
             {key}: <strong style={{ color: 'var(--text)' }}>{sel[key]}</strong>
           </div>
           <div className="var-opts">
-            {uniqAttrVals(variants, key).map(val =>
-              key === 'color' ? (
-                <button
-                  key={val}
-                  title={val}
-                  className={`var-btn var-color${sel[key] === val ? ' active' : ''}`}
-                  style={{
-                    background: COLOR_MAP[val] || '#ccc',
-                    borderWidth: sel[key] === val ? '2.5px' : '2px',
-                    borderColor: sel[key] === val ? 'var(--accent)' : 'var(--border)',
-                  }}
-                  disabled={!isAvailable(key, val)}
-                  onClick={() => setSel(s => ({ ...s, [key]: val }))}
-                />
-              ) : (
+            {key === 'color' ? (
+              <div className="container-items">
+                {uniqAttrVals(variants, key).map(val => (
+                  <button
+                    key={val}
+                    aria-label={val}
+                    className={`item-color${sel[key] === val ? ' active' : ''}`}
+                    style={{ '--color': COLOR_MAP[val] || val } as any}
+                    disabled={!isAvailable(key, val)}
+                    onClick={() => setSel(s => ({ ...s, [key]: val }))}
+                  />
+                ))}
+              </div>
+            ) : (
+              uniqAttrVals(variants, key).map(val => (
                 <button
                   key={val}
                   className={`var-btn${sel[key] === val ? ' active' : ''}`}
@@ -71,7 +71,7 @@ export function VariantSelector({ product, onVariantChange }: VariantSelectorPro
                 >
                   {val}
                 </button>
-              )
+              ))
             )}
           </div>
         </div>
