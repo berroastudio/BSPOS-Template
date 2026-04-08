@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, ShoppingBag, Shield, CreditCard, Check, Minus, Plus, AlertCircle } from 'lucide-react';
 import { BSLoading } from './BSLoading';
 import { useUser } from '@clerk/clerk-react';
@@ -30,8 +30,10 @@ export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: Che
   const [inventoryMap, setInventoryMap] = useState<Record<string, number>>({});
   
   // Shipping & Logistics states
-  const [carrierId, setCarrierId] = useState('flash_delivery');
-  const [customShippingPrice, setCustomShippingPrice] = useState<number | null>(null);
+  const [carriers, setCarriers] = useState<any[]>([]);
+  const [rates, setRates] = useState<any[]>([]);
+  const [country, setCountry] = useState('DO');
+  const [selectedCarrier, setSelectedCarrier] = useState<string>('');
 
   useEffect(() => {
     const fetchInv = async () => {
@@ -46,7 +48,23 @@ export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: Che
       setInventoryMap(map);
     };
     fetchInv();
-  }, []); // eslint-disable-line
+  }, [cart]);
+
+  const totalWeight = cart.reduce((s, it) => s + ((it.product.weight_grams || 454) / 453.59) * it.qty, 0);
+
+  useEffect(() => {
+    import('../lib/storefront-api').then(m => {
+      m.getShippingCarriers({ country }).then(setCarriers);
+    });
+  }, [country]);
+
+  useEffect(() => {
+    if (carriers.length > 0) {
+      import('../lib/storefront-api').then(m => {
+        m.getShippingRates({ weight_lb: totalWeight }).then(setRates);
+      });
+    }
+  }, [carriers, totalWeight]);
 
   const subtotal = cart.reduce((s, item) => {
     const base = getProductPrice(item.product, currency) * item.qty;
@@ -58,15 +76,19 @@ export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: Che
 
   const discount = promoState.status === 'ok' ? promoState.discountAmount : 0;
 
-  // Free shipping thresholds
+  // Find selected rate
+  const activeRate = rates.find(r => r.carrier_id === selectedCarrier);
+  const calculatedShipping = activeRate ? (currency === 'DOP' ? activeRate.price_dop : activeRate.price_usd) : 0;
+
+  // Free shipping thresholds (fallback if no rate selected)
   const freeShippingThreshold = currency === 'DOP' ? 8000 : currency === 'EUR' ? 130 : 150;
   const shippingBase = currency === 'DOP' ? 450 : currency === 'EUR' ? 7 : 8;
-  const shipping = (subtotal - discount) > freeShippingThreshold ? 0 : shippingBase;
+  const fallbackShipping = (subtotal - discount) > freeShippingThreshold ? 0 : shippingBase;
 
   const taxRate = STORES[storeId].tax_rate || 0;
   
-  // Use custom shipping price if edited, otherwise calculated shipping
-  const actualShipping = customShippingPrice !== null ? customShippingPrice : shipping;
+  // Use calculated if carrier selected, otherwise fallback
+  const actualShipping = selectedCarrier ? calculatedShipping : fallbackShipping;
   
   const taxAmount = taxRate > 0 ? ((subtotal - discount + actualShipping) * taxRate) / 100 : 0;
   const total = subtotal - discount + actualShipping + taxAmount;
@@ -211,31 +233,42 @@ export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: Che
                 )}
                 <div className="sum-row" style={{ flexDirection: 'column', gap: '8px', borderTop: '1px solid var(--border)', paddingTop: '12px', marginTop: '4px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
-                    <span>Shipping ({carrierId})</span>
+                    <span>Shipping ({country})</span>
                     <span>{actualShipping === 0 ? 'Free 🎉' : fmt(actualShipping, currency)}</span>
                   </div>
                   
+                  {/* Country Selection */}
+                  <div style={{ display: 'flex', gap: '6px', marginBottom: '4px' }}>
+                    {['DO', 'US', 'WW'].map(c => (
+                      <button 
+                        key={c}
+                        className={`btn btn-sm ${country === c ? 'btn-solid' : ''}`}
+                        style={{ flex: 1, fontSize: '0.65rem', padding: '4px' }}
+                        onClick={() => setCountry(c)}
+                      >
+                        {c === 'DO' ? '🇩🇴 RD' : c === 'US' ? '🇺🇸 US' : '🌐 WW'}
+                      </button>
+                    ))}
+                  </div>
+
                   {/* Delivery Selection UI */}
-                  <div style={{ display: 'flex', gap: '8px', width: '100%', marginBottom: '4px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', marginBottom: '4px' }}>
                     <select 
                       className="promo-in" 
-                      style={{ flex: 1, padding: '4px 8px', fontSize: '0.75rem' }}
-                      value={carrierId}
-                      onChange={(e) => setCarrierId(e.target.value)}
+                      style={{ width: '100%', padding: '6px 8px', fontSize: '0.75rem' }}
+                      value={selectedCarrier}
+                      onChange={(e) => setSelectedCarrier(e.target.value)}
                     >
-                      <option value="flash_delivery">Flash Delivery (BS)</option>
-                      <option value="uber_flash">Uber Flash</option>
-                      <option value="indriver">InDrive / Mensajería</option>
-                      <option value="pickup">Recogida Personal</option>
+                      <option value="">Seleccionar Carrier</option>
+                      {carriers.map(c => {
+                        const r = rates.find(rate => rate.carrier_id === c.id);
+                        return (
+                          <option key={c.id} value={c.id}>
+                            {c.name} {r ? `(${fmt(currency === 'DOP' ? r.price_dop : r.price_usd, currency)})` : ''}
+                          </option>
+                        );
+                      })}
                     </select>
-                    <input 
-                      type="number"
-                      className="promo-in"
-                      style={{ width: '80px', padding: '4px 8px', fontSize: '0.75rem' }}
-                      placeholder="Precio"
-                      value={customShippingPrice ?? ''}
-                      onChange={(e) => setCustomShippingPrice(e.target.value === '' ? null : Number(e.target.value))}
-                    />
                   </div>
                 </div>
                 {taxAmount > 0 && (
@@ -295,7 +328,7 @@ export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: Che
                     },
                     userId: user?.id,
                     shipping_price: actualShipping,
-                    carrier_id: carrierId
+                    carrier_id: selectedCarrier
                   });
                 } catch (err: any) {
                   setCheckoutError(err.message || 'Error al iniciar checkout');
@@ -304,7 +337,7 @@ export function CheckoutPanel({ cart, setCart, currency, storeId, onClose }: Che
               }}
             >
               {checkingOut ? (
-                <><BSLoading size={13} /> Procesando...</>
+                <><BSLoading label="Procesando..." /></>
               ) : (
                 <><CreditCard size={13} /> Checkout · {fmt(total, currency)}</>
               )}

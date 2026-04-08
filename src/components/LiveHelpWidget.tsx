@@ -13,19 +13,32 @@ export function LiveHelpWidget() {
 
     if (tawkMessengerRef.current) {
       try {
+        // Ensure widget is shown first
         tawkMessengerRef.current.showWidget();
-        tawkMessengerRef.current.maximize();
         
-        // If it's a mobile device, we ALSO open the link to be 100% sure it works "al toque"
+        // Small delay to ensure API is ready for maximize
+        setTimeout(() => {
+          tawkMessengerRef.current.maximize();
+        }, 100);
+        
         if (isMobile) {
           window.open(CHAT_URL, '_blank');
         }
       } catch (e) {
-        window.open(CHAT_URL, '_blank');
+        // Fallback to direct API if ref methods fail
+        if ((window as any).Tawk_API) {
+          (window as any).Tawk_API.maximize();
+        } else {
+          window.open(CHAT_URL, '_blank');
+        }
       }
     } else {
-      // Fallback: Direct link if tawk messenger is not initialized
-      window.open(CHAT_URL, '_blank');
+      // Fallback: Direct API or link
+      if ((window as any).Tawk_API) {
+        (window as any).Tawk_API.maximize();
+      } else {
+        window.open(CHAT_URL, '_blank');
+      }
     }
   };
 

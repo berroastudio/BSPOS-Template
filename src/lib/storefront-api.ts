@@ -408,3 +408,56 @@ export async function createTopperQuote(payload: {
 
   return quote;
 }
+
+// ─── Shipping ────────────────────────────────────────────
+
+/**
+ * Obtiene los carriers disponibles filtrados por país.
+ */
+export async function getShippingCarriers(filters?: { country?: string }) {
+  let query = supabase.from('shipping_carriers').select('*').eq('is_active', true);
+  if (filters?.country) {
+    query = query.or(`country.eq.${filters.country},country.eq.ALL`);
+  }
+  const { data, error } = await query.order('name', { ascending: true });
+  if (error) {
+    console.error('[storefront-api] getShippingCarriers:', error);
+    return [];
+  }
+  return data || [];
+}
+
+/**
+ * Obtiene los puntos de recogida (Pickup Points) o localidades.
+ */
+export async function getShippingLocations(filters?: { is_pickup_point?: boolean; municipality?: string }) {
+  let query = supabase.from('shipping_locations').select('*').eq('is_active', true);
+  if (filters?.is_pickup_point !== undefined) query = query.eq('is_pickup_point', filters.is_pickup_point);
+  if (filters?.municipality) query = query.ilike('municipality', `%${filters.municipality}%`);
+  const { data, error } = await query.order('municipality', { ascending: true });
+  if (error) {
+    console.error('[storefront-api] getShippingLocations:', error);
+    return [];
+  }
+  return data || [];
+}
+
+/**
+ * Calcula o busca la tarifa de envío basada en carrier y peso.
+ */
+export async function getShippingRates(filters?: { carrier_id?: string; zone_id?: string; weight_lb?: number }) {
+  let query = supabase.from('shipping_rates').select('*, shipping_carriers(code, name)');
+  if (filters?.carrier_id) query = query.eq('carrier_id', filters.carrier_id);
+  if (filters?.zone_id) query = query.eq('zone_id', filters.zone_id);
+  
+  if (filters?.weight_lb !== undefined) {
+    query = query.lte('weight_lb_min', filters.weight_lb).gte('weight_lb_max', filters.weight_lb);
+  }
+
+  const { data, error } = await query.order('price_usd', { ascending: true });
+  if (error) {
+    console.error('[storefront-api] getShippingRates:', error);
+    return [];
+  }
+  return data || [];
+}

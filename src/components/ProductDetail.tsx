@@ -10,6 +10,7 @@ import { STORES, ADDON_DEFS, fmt, type StoreId, type Currency } from '../config/
 import { getProductPrice, getCompareAtPrice, getProductCompatibility, type ProductCompat } from '../lib/storefront-api';
 import type { Product, Variant } from '../types/database';
 import { TopperEditor, type TopperState } from './TopperEditor';
+import { ShippingCalculator } from './ShippingCalculator';
 
 interface ProductDetailProps {
   product: Product;
@@ -440,6 +441,12 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
           >
             <ShoppingBag size={13} /> Add to Cart · {fmt(total, currency)}
           </button>
+
+          {/* Dynamic Shipping Calculator */}
+          <ShippingCalculator 
+            weight_lb={(product.weight_grams || 454) / 453.59} 
+            currency={currency} 
+          />
 
           <div style={{
             marginTop: '.55rem',
