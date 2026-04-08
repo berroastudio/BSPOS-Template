@@ -8,6 +8,7 @@ import { ContactPage } from './pages/ContactPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { CustomTopperPage } from './pages/CustomTopperPage';
 import { CookieBanner } from './components/CookieBanner';
+import { FloatingTopperIcon } from './components/FloatingTopperIcon';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -88,6 +89,7 @@ export default function App() {
           </motion.div>
         </AnimatePresence>
         <CookieBanner />
+        <FloatingTopperIcon />
       </BrowserRouter>
     </ClerkProvider>
   );

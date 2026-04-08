@@ -346,3 +346,48 @@ export async function getDefaultTenantId(): Promise<string | null> {
   _cachedTenantId = data.id;
   return data.id;
 }
+
+/**
+ * Crea una cotización especial para un diseño de Topper Personalizado.
+ */
+export async function createTopperQuote(payload: {
+  customer_name: string;
+  customer_whatsapp: string;
+  address: string;
+  design_data: any;
+  total: number;
+  notes?: string;
+  country: string;
+}) {
+  const tenantId = await getDefaultTenantId();
+
+  const { data, error } = await supabase
+    .from('quotes')
+    .insert({
+      customer_name: payload.customer_name,
+      customer_email: 'topper@guest.com', // Placeholder
+      status: 'sent',
+      total_amount: payload.total,
+      notes: `${payload.notes || ''} [WhatsApp: ${payload.customer_whatsapp}] [Dirección: ${payload.address}] [País: ${payload.country}]`,
+      design_data: payload.design_data,
+      tenant_id: tenantId,
+      created_at: new Date().toISOString()
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('[storefront-api] createTopperQuote:', error);
+    throw error;
+  }
+
+  // También crear una notificación en el backoffice
+  await supabase.from('notifications').insert({
+    title: 'Nueva Solicitud de Topper',
+    message: `${payload.customer_name} envió un diseño para producción.`,
+    type: 'info',
+    tenant_id: tenantId
+  });
+
+  return data;
+}
