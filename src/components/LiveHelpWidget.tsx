@@ -8,19 +8,27 @@ declare global {
 }
 
 export function LiveHelpWidget() {
+  const CHAT_URL = "https://tawk.to/chat/69d5677fb7c31c1c330199de/1jllo0pbq";
+
   const handleSupportClick = () => {
-    // Open Tawk.to widget chat
-    if (window.Tawk_API) {
-      if (typeof window.Tawk_API.maximize === 'function') {
+    // Robust detection: If mobile/tablet or API is slow, use direct link
+    const isMobile = /iPad|iPhone|iPod|android/i.test(navigator.userAgent) || window.innerWidth < 1024;
+
+    if (window.Tawk_API && typeof window.Tawk_API.maximize === 'function') {
+      try {
+        window.Tawk_API.showWidget();
         window.Tawk_API.maximize();
-      } else if (typeof window.Tawk_API.toggle === 'function') {
-        window.Tawk_API.toggle();
-      } else if (typeof window.Tawk_API.openChatBox === 'function') {
-        window.Tawk_API.openChatBox();
+        
+        // If it's a mobile device, we ALSO open the link to be 100% sure it works "al toque"
+        if (isMobile) {
+          window.open(CHAT_URL, '_blank');
+        }
+      } catch (e) {
+        window.open(CHAT_URL, '_blank');
       }
     } else {
-      console.log("Tawk.to is not yet loaded or initialized.");
-      // Fallback: If direct link is needed, but usually Tawk_API exists after load
+      // Fallback: Direct link if Tawk_API is not loaded yet
+      window.open(CHAT_URL, '_blank');
     }
   };
 
