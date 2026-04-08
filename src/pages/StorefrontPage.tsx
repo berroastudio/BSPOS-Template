@@ -7,6 +7,7 @@ import { CheckoutPanel } from '../components/CheckoutPanel';
 import { Toast } from '../components/Toast';
 import { BSLoading } from '../components/BSLoading';
 import { getActiveProducts, getCategories, type Category } from '../lib/storefront-api';
+import { LiveHelpWidget } from '../components/LiveHelpWidget';
 import { STORES, type StoreId, type Currency } from '../config/stores';
 import type { Product, Variant } from '../types/database';
 
@@ -268,6 +269,9 @@ export function StorefrontPage({ defaultView }: StorefrontPageProps) {
 
       {/* Toast notification */}
       <Toast message={toast} />
+
+      {/* Live Help Support */}
+      <LiveHelpWidget />
     </>
   );
 }
