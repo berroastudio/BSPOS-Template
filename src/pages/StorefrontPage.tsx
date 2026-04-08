@@ -145,6 +145,7 @@ export function StorefrontPage({ defaultView }: StorefrontPageProps) {
             </span>
           ))}
           <span className="nav-link" onClick={() => { setFilter('All'); setView('grid'); }}>All</span>
+          <span className="nav-link" style={{ fontWeight: 700, color: '#f5c842' }} onClick={() => window.location.href = '/custom-topper'}>Diseña tu Topper</span>
           <span className="nav-link" onClick={() => window.location.href = '/contact'}>Contacto</span>
         </div>
         <div className="nav-right">

@@ -44,6 +44,7 @@ export function MyAccountPage() {
   async function loadData() {
     try {
       setLoading(true);
+      setError(null);
       const customer = await syncCustomerWithSupabase(user);
       if (customer) {
         setProfile(customer);
@@ -56,15 +57,24 @@ export function MyAccountPage() {
           billing_address: typeof customer.billing_address === 'string' ? customer.billing_address : JSON.stringify(customer.billing_address || '')
         });
         
-        const orderHistory = await getCustomerOrders(customer.email);
-        setOrders(orderHistory);
+        try {
+          const orderHistory = await getCustomerOrders(customer.email);
+          setOrders(orderHistory);
+        } catch (oErr) {
+          console.error("Error loading orders:", oErr);
+        }
+      } else {
+        setError("No pudimos vincular tu cuenta con nuestro sistema. Intenta cerrar sesión y volver a entrar.");
       }
     } catch (err) {
       console.error('Error loading account data:', err);
+      setError("Ocurrió un error inesperado al cargar tu perfil.");
     } finally {
       setLoading(false);
     }
   }
+
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSaveProfile() {
     if (!profile) return;

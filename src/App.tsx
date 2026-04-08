@@ -6,6 +6,7 @@ import { CheckoutCancelled } from './pages/CheckoutCancelled';
 import { MyAccountPage } from './pages/MyAccountPage';
 import { ContactPage } from './pages/ContactPage';
 import { PrivacyPage } from './pages/PrivacyPage';
+import { CustomTopperPage } from './pages/CustomTopperPage';
 import { CookieBanner } from './components/CookieBanner';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -55,6 +56,7 @@ function SubdomainRouter() {
           <SignedOut><RedirectToSignIn /></SignedOut>
         </>
       } />
+      <Route path="/custom-topper" element={<CustomTopperPage />} />
       <Route path="/checkout/success" element={<CheckoutSuccess />} />
       <Route path="/checkout/cancelled" element={<CheckoutCancelled />} />
       <Route path="*" element={<Navigate to="/" replace />} />
