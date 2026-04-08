@@ -10,12 +10,17 @@ declare global {
 export function LiveHelpWidget() {
   const handleSupportClick = () => {
     // Open Tawk.to widget chat
-    if (window.Tawk_API && typeof window.Tawk_API.toggle === 'function') {
-      window.Tawk_API.toggle();
-    } else if (window.Tawk_API && typeof window.Tawk_API.openChatBox === 'function') {
-      window.Tawk_API.openChatBox();
+    if (window.Tawk_API) {
+      if (typeof window.Tawk_API.maximize === 'function') {
+        window.Tawk_API.maximize();
+      } else if (typeof window.Tawk_API.toggle === 'function') {
+        window.Tawk_API.toggle();
+      } else if (typeof window.Tawk_API.openChatBox === 'function') {
+        window.Tawk_API.openChatBox();
+      }
     } else {
       console.log("Tawk.to is not yet loaded or initialized.");
+      // Fallback: If direct link is needed, but usually Tawk_API exists after load
     }
   };
 

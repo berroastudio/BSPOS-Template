@@ -76,6 +76,7 @@ export async function getActiveProducts(): Promise<Product[]> {
  * Primero intenta desde la tabla inventory, luego usa inventory_quantity de variants.
  */
 export async function getInventory(variantId: string): Promise<{ quantity: number; reserved: number; available: number } | null> {
+  console.log(`[storefront-api] Fetching inventory for variant: ${variantId}`);
   try {
     // Intentar desde tabla inventory primero (sumar todas las ubicaciones/tiendas)
     const { data: invRows, error: invError } = await supabase
@@ -83,18 +84,25 @@ export async function getInventory(variantId: string): Promise<{ quantity: numbe
       .select('quantity, reserved')
       .eq('variant_id', variantId);
 
-    if (invRows && invRows.length > 0 && !invError) {
+    if (invError) {
+      console.error('[storefront-api] Inventory table error (Possible RLS issue):', invError.message);
+    }
+
+    if (invRows && invRows.length > 0) {
       const totals = invRows.reduce((acc, row) => ({
         quantity: acc.quantity + (row.quantity || 0),
         reserved: acc.reserved + (row.reserved || 0),
       }), { quantity: 0, reserved: 0 });
 
+      console.log(`[storefront-api] Table 'inventory' totals:`, totals);
       return {
         quantity: totals.quantity,
         reserved: totals.reserved,
         available: Math.max(0, totals.quantity - totals.reserved)
       };
     }
+
+    console.log(`[storefront-api] No rows in 'inventory', falling back to variant stock.`);
 
     // Fallback: obtener desde variants.inventory_quantity
     const { data: variantData, error: variantError } = await supabase
@@ -103,7 +111,11 @@ export async function getInventory(variantId: string): Promise<{ quantity: numbe
       .eq('id', variantId)
       .single() as any;
 
-    if (!variantError && variantData) {
+    if (variantError) {
+      console.error('[storefront-api] Variant table error:', variantError.message);
+    }
+
+    if (variantData) {
       const qty = variantData.inventory_quantity || 0;
       return {
         quantity: qty,
@@ -112,10 +124,10 @@ export async function getInventory(variantId: string): Promise<{ quantity: numbe
       };
     }
 
-    console.warn(`[storefront-api] No inventory found for variant ${variantId}`);
+    console.warn(`[storefront-api] No inventory findings for variant ${variantId}`);
     return null;
   } catch (error) {
-    console.error('[storefront-api] getInventory error:', error);
+    console.error('[storefront-api] getInventory fatal error:', error);
     return null;
   }
 }
@@ -361,7 +373,7 @@ export async function createTopperQuote(payload: {
 }) {
   const tenantId = await getDefaultTenantId();
 
-  const { data, error } = await supabase
+  const { data: quote, error } = await (supabase as any)
     .from('quotes')
     .insert({
       customer_name: payload.customer_name,
@@ -381,13 +393,18 @@ export async function createTopperQuote(payload: {
     throw error;
   }
 
-  // También crear una notificación en el backoffice
-  await supabase.from('notifications').insert({
-    title: 'Nueva Solicitud de Topper',
-    message: `${payload.customer_name} envió un diseño para producción.`,
-    type: 'info',
-    tenant_id: tenantId
-  });
+  // ─────────────────────────────────────────
+  // 3. NOTIFICAR AL ADMIN (Realtime Alert)
+  // ─────────────────────────────────────────
+  if (quote) {
+    await (supabase as any).from('notifications').insert({
+      tenant_id: tenantId,
+      title: '🎂 Nueva Producción: Topper',
+      message: `Solicitud de ${payload.customer_name} recibida.`,
+      type: 'topper',
+      action_url: `/topper`
+    });
+  }
 
-  return data;
+  return quote;
 }
