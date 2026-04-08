@@ -69,35 +69,76 @@ export function ContactPage() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="contact-info"
           >
-            <div className="info-card">
-              <div className="info-icon">
-                <Mail size={24} />
-              </div>
-              <h3>Email</h3>
-              <p>
-                <a href="mailto:hello@berroastudio.com">hello@berroastudio.com</a>
-              </p>
-              <em>Respondemos en 24 horas</em>
-            </div>
-
+            {/* Teléfono */}
             <div className="info-card">
               <div className="info-icon">
                 <Phone size={24} />
               </div>
               <h3>Teléfono</h3>
               <p>
-                <a href="tel:+18095551234">+1 (809) 555-1234</a>
+                <a href="tel:+17325233816">+1 (732) 523-3816</a>
               </p>
               <em>Lun-Vie: 9AM-6PM EST</em>
             </div>
 
+            {/* Emails */}
             <div className="info-card">
               <div className="info-icon">
-                <MapPin size={24} />
+                <Mail size={24} />
               </div>
-              <h3>Ubicación</h3>
-              <p>Santo Domingo<br />República Dominicana</p>
-              <em>Tienda Física</em>
+              <h3>Ventas y Órdenes</h3>
+              <p>
+                <a href="mailto:sales@berroastudio.com">sales@berroastudio.com</a><br />
+                <a href="mailto:ventas@berroastudio.com">ventas@berroastudio.com</a>
+              </p>
+            </div>
+
+            <div className="info-card">
+              <div className="info-icon">
+                <Mail size={24} />
+              </div>
+              <h3>Soporte Técnico</h3>
+              <p>
+                <a href="mailto:support@berroastudio.com">support@berroastudio.com</a><br />
+                <a href="mailto:soporte@berroastudio.com">soporte@berroastudio.com</a>
+              </p>
+            </div>
+
+            <div className="info-card">
+              <div className="info-icon">
+                <Mail size={24} />
+              </div>
+              <h3>Piezas Custom & Cotizaciones</h3>
+              <p>
+                <a href="mailto:custom@berroastudio.com">custom@berroastudio.com</a>
+              </p>
+              <em>Diseños personalizados y piezas únicas</em>
+            </div>
+
+            {/* Social / Chat */}
+            <div className="info-card social-card highlight">
+              <div className="info-icon telegram">
+                <Send size={24} />
+              </div>
+              <h3>Telegram Bot</h3>
+              <p>
+                <a href="https://t.me/Berroastudio_bot" target="_blank" rel="noopener noreferrer">@Berroastudio_bot</a>
+              </p>
+              <div className="qr-container">
+                <img src="/telegram-qr.jpg" alt="Telegram QR" className="qr-image" />
+              </div>
+              <em>Chatea con nuestro asistente inteligente</em>
+            </div>
+
+            <div className="info-card social-card">
+              <div className="info-icon whatsapp">
+                <MapPin size={24} /> {/* Placeholder for WhatsApp icon if MessageCircle not imported */}
+              </div>
+              <h3>WhatsApp Business</h3>
+              <p>
+                <a href="https://wa.me/17325233816" target="_blank" rel="noopener noreferrer">Chat via WhatsApp</a>
+              </p>
+              <em>Atención rápida y personalizada</em>
             </div>
           </motion.div>
 

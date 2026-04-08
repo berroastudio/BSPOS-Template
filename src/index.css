@@ -597,6 +597,36 @@ body {
   display: block;
 }
 
+.qr-container {
+  margin-top: 1rem;
+  padding: 0.5rem;
+  background: white;
+  border-radius: var(--r-sm);
+  display: inline-block;
+}
+
+.qr-image {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  display: block;
+}
+
+.social-card.highlight {
+  border-color: var(--accent);
+  background: var(--bg2);
+}
+
+.info-icon.telegram {
+  background: #0088cc;
+  color: white;
+}
+
+.info-icon.whatsapp {
+  background: #25d366;
+  color: white;
+}
+
 .contact-form-wrapper {
   background: var(--card);
   border: 1px solid var(--border);
