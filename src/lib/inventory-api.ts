@@ -5,6 +5,9 @@
 import { supabase } from './supabase';
 import { getDefaultTenantId } from './storefront-api';
 
+const STORE_REGION = import.meta.env.VITE_STORE_REGION || 'RD';
+console.log('[inventory-api] Active Region:', STORE_REGION);
+
 // ============================================================================
 // 1. GET INVENTORY BY STORE AND VARIANT
 // ============================================================================
@@ -31,24 +34,38 @@ export async function getInventoryByStore(
 
     let query = supabase
       .from('inventory')
-      .select('id, quantity, reserved, is_available, store_id, minimum_stock')
+      .select('id, quantity, reserved, is_available, store_id, minimum_stock, store_locations!inner(region)')
       .eq('tenant_id', tenantId)
-      .eq('variant_id', variantId);
+      .eq('variant_id', variantId)
+      .eq('store_locations.region', STORE_REGION);
 
     if (storeId) {
       query = query.eq('store_id', storeId);
     }
 
-    const { data: inventory, error } = await query.single();
+    const { data: inventories, error } = await query;
 
-    if (error || !inventory) {
-      console.warn(`[inventory-api] No inventory for variant ${variantId}:`, error?.message);
-      return null;
+    if (error || !inventories || inventories.length === 0) {
+      console.warn(`[inventory-api] No inventory for variant ${variantId} in region ${STORE_REGION}`);
+      return {
+        variantId,
+        storeId,
+        quantity: 0,
+        reserved: 0,
+        available: 0,
+        isAvailable: false,
+        status: 'OUT_OF_STOCK',
+        message: 'Producto agotado en esta región',
+      };
     }
 
-    const available = (inventory.quantity || 0) - (inventory.reserved || 0);
+    // Sum quantities from all stores in the region
+    const totalQty = inventories.reduce((sum, inv) => sum + (inv.quantity || 0), 0);
+    const totalReserved = inventories.reduce((sum, inv) => sum + (inv.reserved || 0), 0);
+    const available = totalQty - totalReserved;
     const isOutOfStock = available <= 0;
-    const isLowStock = available > 0 && available < (inventory.minimum_stock || 10);
+    const minStock = inventories[0]?.minimum_stock || 10;
+    const isLowStock = available > 0 && available < minStock;
 
     let status: 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK' = 'IN_STOCK';
     let message = `${available} unidades disponibles`;
@@ -64,10 +81,10 @@ export async function getInventoryByStore(
     return {
       variantId,
       storeId,
-      quantity: inventory.quantity || 0,
-      reserved: inventory.reserved || 0,
+      quantity: totalQty,
+      reserved: totalReserved,
       available: Math.max(0, available),
-      isAvailable: inventory.is_available && !isOutOfStock,
+      isAvailable: inventories.some(i => i.is_available) && !isOutOfStock,
       status,
       message,
     };
@@ -91,9 +108,10 @@ export async function getInventoryMultiple(
 
     const { data: inventories, error } = await supabase
       .from('inventory')
-      .select('variant_id, quantity, reserved, is_available, minimum_stock, store_id')
+      .select('variant_id, quantity, reserved, is_available, minimum_stock, store_id, store_locations!inner(region)')
       .eq('tenant_id', tenantId)
       .in('variant_id', variantIds)
+      .eq('store_locations.region', STORE_REGION)
       .order('variant_id');
 
     if (error) {
@@ -200,11 +218,12 @@ export async function getStoresWithAvailableInventory(variantId: string) {
         quantity,
         reserved,
         store_id,
-        store_locations(id, name, city, address, phone)
+        store_locations!inner(id, name, city, address, phone, region)
       `
       )
       .eq('tenant_id', tenantId)
       .eq('variant_id', variantId)
+      .eq('store_locations.region', STORE_REGION)
       .gt('quantity', 0) // Has stock
       .order('quantity', { ascending: false });
 
