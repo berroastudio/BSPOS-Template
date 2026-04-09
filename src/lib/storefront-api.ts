@@ -461,3 +461,25 @@ export async function getShippingRates(filters?: { carrier_id?: string; zone_id?
   }
   return data || [];
 }
+
+/**
+ * Obtiene manuales de instrucciones vinculados a un SKU específico.
+ */
+export async function getInstructionsBySku(sku: string): Promise<any[]> {
+  try {
+    const { data, error } = await supabase
+      .from('product_instructions')
+      .select('*, steps:instruction_steps(*)')
+      .contains('linked_skus', [sku])
+      .eq('is_public', true);
+
+    if (error) throw error;
+    return (data || []).map(ins => ({
+      ...ins,
+      steps: (ins.steps || []).sort((a: any, b: any) => a.step_number - b.step_number)
+    }));
+  } catch (err) {
+    console.error('[storefront-api] getInstructionsBySku:', err);
+    return [];
+  }
+}

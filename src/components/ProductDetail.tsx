@@ -7,7 +7,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { VariantSelector, AddonBadges } from './VariantSelector';
 import { STORES, ADDON_DEFS, fmt, type StoreId, type Currency } from '../config/stores';
-import { getProductPrice, getCompareAtPrice, getProductCompatibility, type ProductCompat } from '../lib/storefront-api';
+import { getProductPrice, getCompareAtPrice, getProductCompatibility, getInstructionsBySku, type ProductCompat } from '../lib/storefront-api';
 import type { Product, Variant } from '../types/database';
 import { TopperEditor, type TopperState } from './TopperEditor';
 import { ShippingCalculator } from './ShippingCalculator';
@@ -40,6 +40,7 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
   });
   const [showShare, setShowShare] = useState(false);
   const [skuCopied, setSkuCopied] = useState(false);
+  const [instructions, setInstructions] = useState<any[]>([]);
   const [currentLang, setCurrentLang] = useState<"es" | "en">(() => (localStorage.getItem("bs-lang") as "es" | "en") || "es");
 
   useEffect(() => {
@@ -159,6 +160,24 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
     }
   }, [sv]);
 
+  useEffect(() => {
+    const fetchInstr = async () => {
+      let all: any[] = [];
+      if (product.sku) {
+        const prodInstr = await getInstructionsBySku(product.sku);
+        all = [...all, ...prodInstr];
+      }
+      if (sv?.sku && sv.sku !== product.sku) {
+        const varInstr = await getInstructionsBySku(sv.sku);
+        all = [...all, ...varInstr];
+      }
+      // Unique by ID
+      const unique = all.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+      setInstructions(unique);
+    };
+    fetchInstr();
+  }, [product.sku, sv?.sku]);
+
   const media = product.media as any;
   const imgs: string[] = media?.images || [];
   const dimKeys = product.dimensions ? Object.keys(product.dimensions as object) : [];
@@ -267,6 +286,32 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
                   <BookOpen size={13} /> Libreta de Instrucciones Digital
                 </div>
               )}
+
+              {instructions.map(ins => (
+                <div 
+                  key={ins.id}
+                  className="instruction-badge-clickable"
+                  onClick={() => window.open(`https://instructions.berroastudio.com/i/${ins.id}`, '_blank')}
+                  style={{
+                    marginTop: "0.5rem",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "6px 12px",
+                    background: "#BAC7FD",
+                    color: "#2E47B0",
+                    borderRadius: "12px",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 2px 8px rgba(186, 199, 253, 0.4)",
+                    transition: "all 0.2s",
+                    marginLeft: product.instruction_id ? "0.5rem" : "0"
+                  }}
+                >
+                  <BookOpen size={13} /> {ins.title} (Digital)
+                </div>
+              ))}
             </div>
             
             <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
