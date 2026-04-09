@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Search, User, ShoppingBag, Sun, Moon, Globe } from 'lucide-react';
 import { StoreStrip } from '../components/StoreStrip';
 import { ProductCard, type CartItem } from '../components/ProductCard';
