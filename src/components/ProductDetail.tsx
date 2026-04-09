@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   ChevronLeft, ShoppingBag, Shield, Tag, Star,
   Package, Leaf, Droplets, Recycle, Plus, Minus, Gift, Car, Bike,
-  Heart, Share2, MessageCircle, Send, Copy, Instagram, Facebook, Mail, Check
+  Heart, Share2, MessageCircle, Send, Copy, Instagram, Facebook, Mail, Check, BookOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { VariantSelector, AddonBadges } from './VariantSelector';
@@ -40,6 +40,13 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
   });
   const [showShare, setShowShare] = useState(false);
   const [skuCopied, setSkuCopied] = useState(false);
+  const [currentLang, setCurrentLang] = useState<"es" | "en">(() => (localStorage.getItem("bs-lang") as "es" | "en") || "es");
+
+  useEffect(() => {
+    const handleLang = (e: any) => setCurrentLang(e.detail);
+    window.addEventListener('bs-lang-change', handleLang);
+    return () => window.removeEventListener('bs-lang-change', handleLang);
+  }, []);
 
   // Toggle favorite
   useEffect(() => {
@@ -81,12 +88,12 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
       const price = getProductPrice(product, currency);
       const images = (product.media as any)?.images || [];
       
-      const productSchema = {
+      const productSchema: any = {
         "@context": "https://schema.org",
         "@type": "Product",
-        "name": product.name,
+        "name": (product.translations as any)?.[localStorage.getItem("bs-lang") || "es"]?.name || product.name,
         "image": images,
-        "description": product.description || `Comprar ${product.name} en Berroa Studio.`,
+        "description": (product.translations as any)?.[localStorage.getItem("bs-lang") || "es"]?.description || product.description || `Comprar ${product.name} en Berroa Studio.`,
         "sku": product.sku,
         "offers": {
           "@type": "Offer",
@@ -96,6 +103,14 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
           "availability": (realStock ?? sv?.inventory_quantity ?? 0) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
         }
       };
+
+      if (product.instruction_id) {
+        productSchema.hasPart = {
+          "@type": "CreativeWork",
+          "name": "Digital Assembly & Usage Instructions",
+          "url": `https://instructions.berroastudio.com/i/${product.instruction_id}`
+        };
+      }
 
       const breadcrumbSchema = {
         "@context": "https://schema.org",
@@ -116,7 +131,7 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
           {
             "@type": "ListItem",
             "position": 3,
-            "name": product.name,
+            "name": productSchema.name,
             "item": window.location.href
           }
         ]
@@ -219,13 +234,39 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
         <div className={isTopper ? "topper-sidebar" : ""}>
           <div className="info-title-row">
             <div>
-              <h1 className="info-title">{product.name}</h1>
+              <h1 className="info-title">
+                {(product.translations as any)?.[localStorage.getItem("bs-lang") || "es"]?.name || product.name}
+              </h1>
               <div className="sku-copy-row">
                 <span>SKU: {product.sku}</span>
                 <button className="sku-copy-btn" onClick={copySku} title="Click para copiar SKU">
                   {skuCopied ? <Check size={12} strokeWidth={3} /> : <Copy size={12} />}
                 </button>
               </div>
+              
+              {product.instruction_id && (
+                <div 
+                  className="instruction-badge-clickable"
+                  onClick={() => window.open(`https://instructions.berroastudio.com/i/${product.instruction_id}`, '_blank')}
+                  style={{
+                    marginTop: "0.5rem",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "6px 12px",
+                    background: "#BAC7FD",
+                    color: "#2E47B0",
+                    borderRadius: "12px",
+                    fontSize: "0.72rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 2px 8px rgba(186, 199, 253, 0.4)",
+                    transition: "all 0.2s"
+                  }}
+                >
+                  <BookOpen size={13} /> Libreta de Instrucciones Digital
+                </div>
+              )}
             </div>
             
             <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
@@ -305,8 +346,8 @@ export function ProductDetail({ product, storeId, currency, onBack, onAddToCart 
             )}
           </div>
 
-          {product.description && !isTopper && (
-            <p className="detail-desc">{product.description}</p>
+          {((product.translations as any)?.[localStorage.getItem("bs-lang") || "es"]?.description || product.description) && !isTopper && (
+            <p className="detail-desc">{(product.translations as any)?.[localStorage.getItem("bs-lang") || "es"]?.description || product.description}</p>
           )}
 
           {/* Sizing description for toppers */}
@@ -502,6 +543,11 @@ const styles = `
      background: var(--card);
      position: sticky;
      top: 100px;
+  }
+  .instruction-badge-clickable:hover {
+    transform: translateY(-2px);
+    background: #cdd8ff !important;
+    box-shadow: 0 4px 12px rgba(186, 199, 253, 0.6) !important;
   }
 `;
 

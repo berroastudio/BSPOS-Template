@@ -7,10 +7,12 @@ import { MyAccountPage } from './pages/MyAccountPage';
 import { ContactPage } from './pages/ContactPage';
 import { PrivacyPage } from './pages/PrivacyPage';
 import { CustomTopperPage } from './pages/CustomTopperPage';
+import { InstructionPage } from './pages/InstructionPage';
 import { CookieBanner } from './components/CookieBanner';
 import { FloatingTopperIcon } from './components/FloatingTopperIcon';
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { FloatingNavigator } from './components/FloatingNavigator';
 
 const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
@@ -45,7 +47,18 @@ function SubdomainRouter() {
     );
   }
 
-  // 3. Tienda Principal: berroastudio.com o localhost
+  // 3. Instrucciones: instructions.berroastudio.com
+  if (hostname.includes('instructions.')) {
+    return (
+      <Routes>
+        <Route path="/" element={<InstructionPage />} />
+        <Route path="/i/:id" element={<InstructionPage />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    );
+  }
+
+  // 4. Tienda Principal: berroastudio.com o localhost
   return (
     <Routes>
       <Route path="/" element={<StorefrontPage />} />
@@ -90,6 +103,7 @@ export default function App() {
         </AnimatePresence>
         <CookieBanner />
         <FloatingTopperIcon />
+        <FloatingNavigator />
       </BrowserRouter>
     </ClerkProvider>
   );

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, User, ShoppingBag, Sun, Moon } from 'lucide-react';
+import { Search, User, ShoppingBag, Sun, Moon, Languages } from 'lucide-react';
 import { StoreStrip } from '../components/StoreStrip';
 import { ProductCard, type CartItem } from '../components/ProductCard';
 import { ProductDetail } from '../components/ProductDetail';
@@ -55,7 +55,16 @@ export function StorefrontPage({ defaultView }: StorefrontPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [searchQ, setSearchQ] = useState('');
 
+  const [language, setLanguage] = useState<"es" | "en">(() => 
+    (localStorage.getItem("bs-lang") as "es" | "en") || "es"
+  );
+
   const currency: Currency = STORES[storeId].currency;
+
+  useEffect(() => {
+    localStorage.setItem("bs-lang", language);
+    window.dispatchEvent(new CustomEvent('bs-lang-change', { detail: language }));
+  }, [language]);
 
   // ─── Apply theme ───────────────────────────────────────
   useEffect(() => {
@@ -167,6 +176,15 @@ export function StorefrontPage({ defaultView }: StorefrontPageProps) {
           >
             <ShoppingBag size={16} />
             {cart.length > 0 && <span className="cart-dot" />}
+          </button>
+          <button
+            className="icon-btn"
+            onClick={() => setLanguage(l => l === 'es' ? 'en' : 'es')}
+            title="Swith Language"
+            style={{ padding: "0 .4rem", fontSize: ".72rem", fontWeight: 700 }}
+          >
+            <Languages size={14} style={{ marginRight: 2 }} />
+            {language.toUpperCase()}
           </button>
           <button
             className="icon-btn"
