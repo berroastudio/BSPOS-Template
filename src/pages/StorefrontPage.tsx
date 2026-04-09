@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { Search, User, ShoppingBag, Sun, Moon, Languages } from 'lucide-react';
+import { Search, User, ShoppingBag, Sun, Moon, Globe } from 'lucide-react';
 import { StoreStrip } from '../components/StoreStrip';
 import { ProductCard, type CartItem } from '../components/ProductCard';
 import { ProductDetail } from '../components/ProductDetail';
@@ -183,7 +182,7 @@ export function StorefrontPage({ defaultView }: StorefrontPageProps) {
             title="Swith Language"
             style={{ padding: "0 .4rem", fontSize: ".72rem", fontWeight: 700 }}
           >
-            <Languages size={14} style={{ marginRight: 2 }} />
+            <Globe size={14} style={{ marginRight: 2 }} />
             {language.toUpperCase()}
           </button>
           <button
