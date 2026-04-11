@@ -56,20 +56,36 @@ export async function getActiveProducts(): Promise<Product[]> {
       categories!products_category_id_fkey (id, name, slug)
     `)
     .eq('status', 'active')
+    .eq('show_online', true)          // ← Solo productos marcados para la tienda online
     .order('created_at', { ascending: false });
 
   if (error) {
+    // Si la columna aún no existe (migration pendiente), obtener sin filtro
+    if (error.code === '42703') {
+      console.warn('[storefront-api] Columna show_online no existe aún. Ejecuta la migración SQL.');
+      const { data: fallback, error: fallbackError } = await supabase
+        .from('products')
+        .select(`*, variants (*), categories!products_category_id_fkey (id, name, slug)`)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+      if (fallbackError) throw fallbackError;
+      return (fallback || []).map((p: any) => ({
+        ...p,
+        category: p.categories?.name || p.category || null,
+        category_slug: p.categories?.slug || null,
+      })) as Product[];
+    }
     console.error('[storefront-api] getActiveProducts:', error);
     throw error;
   }
 
-  // Map category name from join for convenience
   return (data || []).map((p: any) => ({
     ...p,
     category: p.categories?.name || p.category || null,
     category_slug: p.categories?.slug || null,
   })) as Product[];
 }
+
 
 /**
  * Obtiene el inventario actual para una variante o producto.

@@ -948,3 +948,134 @@ textarea.form-input {
     font-size: 1.1rem;
   }
 }
+
+/* ═══ MOBILE RESPONSIVE ══════════════════════════════════ */
+
+/* ── Navigation (mobile hamburger) ────────────────────── */
+@media (max-width: 768px) {
+  .nav {
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .nav-links {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    gap: 0.25rem;
+    order: 3;
+    border-top: 1px solid var(--border);
+    padding-top: 0.5rem;
+    margin-top: 0.25rem;
+  }
+  .nav-links.open {
+    display: flex;
+  }
+  .nav-link {
+    padding: 0.6rem 0.5rem;
+    font-size: 0.8rem;
+    border-radius: var(--r-sm);
+  }
+  .nav-link:hover { background: var(--bg2); }
+  .nav-logo { font-size: 1rem; }
+  .nav-right { gap: 0.25rem; }
+
+  /* Mobile menu toggle */
+  .nav-mobile-toggle {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .nav-mobile-toggle { display: none !important; }
+}
+
+/* ── Container ────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .container { padding: 0 1rem; }
+}
+@media (max-width: 480px) {
+  .container { padding: 0 0.75rem; }
+}
+
+/* ── Product Grid ─────────────────────────────────────── */
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.65rem;
+    padding-bottom: 2rem;
+  }
+  .loading-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.65rem;
+  }
+  .card { padding: 0.6rem; }
+  .card-title { font-size: 0.78rem; }
+  .card-price { font-size: 0.78rem; margin-bottom: 0.5rem; }
+  .btn-full { font-size: 0.6rem; padding: 0.5rem 0.6rem; }
+}
+
+@media (max-width: 380px) {
+  .grid { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+  .card { padding: 0.5rem; }
+}
+
+/* ── Filter Bar ───────────────────────────────────────── */
+@media (max-width: 768px) {
+  .filter-bar {
+    padding: 1rem 0 0.75rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  .pills { overflow-x: auto; flex-wrap: nowrap; max-width: 100%; scrollbar-width: none; -ms-overflow-style: none; }
+  .pills::-webkit-scrollbar { display: none; }
+}
+
+/* ── Store Strip ──────────────────────────────────────── */
+@media (max-width: 768px) {
+  .store-strip {
+    padding: 0.4rem 1rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .store-strip::-webkit-scrollbar { display: none; }
+  .strip-info { display: none; }
+}
+
+/* ── Detail Page ──────────────────────────────────────── */
+@media (max-width: 640px) {
+  .detail-wrap { padding: 1rem 0 3rem; }
+  .back { margin-bottom: 1rem; }
+  .info-title { font-size: 1.35rem; }
+  .price-main { font-size: 1rem; }
+  .sec { font-size: 0.58rem; }
+  .var-btn { padding: 0.3rem 0.6rem; font-size: 0.72rem; }
+  .addons-grid { grid-template-columns: 1fr; }
+  .compat-grid { grid-template-columns: 1fr; }
+  .contact-row { flex-direction: column; }
+}
+
+/* ── Checkout Panel ───────────────────────────────────── */
+@media (max-width: 480px) {
+  .panel { width: 100vw; }
+  .panel-hd { padding: 1rem; }
+  .panel-body { padding: 1rem; }
+  .panel-ft { padding: 1rem; }
+  .ci-img { width: 56px; height: 70px; }
+  .ci-name { font-size: 0.78rem; }
+  .ci-price { font-size: 0.8rem; }
+}
+
+/* ── Gallery Thumbs ───────────────────────────────────── */
+@media (max-width: 640px) {
+  .gal-thumbs { grid-template-columns: repeat(4, 1fr); gap: 0.35rem; }
+}
+
+/* ── Typography & Spacing ─────────────────────────────── */
+@media (max-width: 768px) {
+  .qty-row { flex-wrap: wrap; gap: 0.75rem; }
+  .info-title-row { gap: 0.5rem; }
+  .price-row { margin-bottom: 0.75rem; }
+}

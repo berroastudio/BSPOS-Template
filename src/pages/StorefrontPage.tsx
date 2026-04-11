@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, User, ShoppingBag, Sun, Moon, Globe } from 'lucide-react';
+import { Search, User, ShoppingBag, Sun, Moon, Globe, Menu, X } from 'lucide-react';
 import { StoreStrip } from '../components/StoreStrip';
 import { ProductCard, type CartItem } from '../components/ProductCard';
 import { ProductDetail } from '../components/ProductDetail';
@@ -54,6 +54,7 @@ export function StorefrontPage({ defaultView }: StorefrontPageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQ, setSearchQ] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [language, setLanguage] = useState<"es" | "en">(() => 
     (localStorage.getItem("bs-lang") as "es" | "en") || "es"
@@ -141,7 +142,15 @@ export function StorefrontPage({ defaultView }: StorefrontPageProps) {
         <span className="nav-logo" onClick={() => { setView('grid'); setFilter('All'); }} style={{ cursor: "pointer", display: "flex", alignItems: "center" }}>
           <img src="/logo-header.png" alt="Berroa Studio" style={{ height: 28, objectFit: "contain" }} />
         </span>
-        <div className="nav-links">
+        <button
+          className="icon-btn nav-mobile-toggle"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label="Menu"
+          style={{ display: 'none' }}
+        >
+          {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+        </button>
+        <div className={`nav-links${mobileMenuOpen ? ' open' : ''}`}>
           {dbCategories.slice(0, 5).map(cat => (
             <span
               key={cat.id}
@@ -149,12 +158,13 @@ export function StorefrontPage({ defaultView }: StorefrontPageProps) {
               onClick={() => {
                 setFilter(cat.name);
                 setView('grid');
+                setMobileMenuOpen(false);
               }}
             >
               {cat.name}
             </span>
           ))}
-          <span className="nav-link" onClick={() => { setFilter('All'); setView('grid'); }}>All</span>
+          <span className="nav-link" onClick={() => { setFilter('All'); setView('grid'); setMobileMenuOpen(false); }}>All</span>
           <span className="nav-link" style={{ fontWeight: 700, color: '#f5c842' }} onClick={() => window.location.href = '/custom-topper'}>Diseña tu Topper</span>
           <span className="nav-link" onClick={() => window.location.href = '/contact'}>Contacto</span>
         </div>
